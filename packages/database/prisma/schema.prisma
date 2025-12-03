@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./library.db"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("LIBRARIAN") // ADMIN, LIBRARIAN
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Book {
+  id            String     @id @default(cuid())
+  isbn          String?    @unique
+  title         String
+  author        String
+  category      String
+  description   String?
+  publishedYear Int?
+  coverImage    String?
+  copies        BookCopy[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model BookCopy {
+  id            String      @id @default(cuid())
+  book          Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  bookId        String
+  barcode       String      @unique
+  status        String      @default("AVAILABLE") // AVAILABLE, BORROWED, MAINTENANCE, LOST
+  condition     String      @default("GOOD") // NEW, GOOD, FAIR, POOR
+  shelfLocation String?
+  borrowings    Borrowing[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Member {
+  id           String      @id @default(cuid())
+  memberNumber String      @unique // LIB-001, LIB-002...
+  firstName    String
+  lastName     String
+  email        String      @unique
+  phone        String?
+  address      String?
+  status       String      @default("ACTIVE") // ACTIVE, SUSPENDED, EXPIRED
+  maxBooks     Int         @default(5)
+  borrowings   Borrowing[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Borrowing {
+  id         String    @id @default(cuid())
+  member     Member    @relation(fields: [memberId], references: [id])
+  memberId   String
+  bookCopy   BookCopy  @relation(fields: [bookCopyId], references: [id])
+  bookCopyId String
+  borrowDate DateTime  @default(now())
+  dueDate    DateTime
+  returnDate DateTime?
+  status     String    @default("ACTIVE") // ACTIVE, RETURNED, OVERDUE
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}

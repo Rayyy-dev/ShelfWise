@@ -1,0 +1,203 @@
+import { Router, Request, Response } from 'express';
+import { prisma } from '@shelfwise/database';
+import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+
+const router = Router();
+
+// Generate next member number
+async function getNextMemberNumber(): Promise<string> {
+  const lastMember = await prisma.member.findFirst({
+    orderBy: { memberNumber: 'desc' },
+  });
+
+  if (!lastMember) {
+    return 'LIB-001';
+  }
+
+  const lastNumber = parseInt(lastMember.memberNumber.split('-')[1]);
+  return `LIB-${String(lastNumber + 1).padStart(3, '0')}`;
+}
+
+// GET /api/members - List all members
+router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { search, status, page = '1', limit = '20' } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search as string } },
+        { lastName: { contains: search as string } },
+        { email: { contains: search as string } },
+        { memberNumber: { contains: search as string } },
+      ];
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    const [members, total] = await Promise.all([
+      prisma.member.findMany({
+        where,
+        include: {
+          _count: {
+            select: {
+              borrowings: { where: { status: 'ACTIVE' } },
+            },
+          },
+        },
+        skip,
+        take: parseInt(limit as string),
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.member.count({ where }),
+    ]);
+
+    const membersWithActiveLoans = members.map((member) => ({
+      ...member,
+      activeLoans: member._count.borrowings,
+    }));
+
+    res.json({
+      members: membersWithActiveLoans,
+      total,
+      page: parseInt(page as string),
+      totalPages: Math.ceil(total / parseInt(limit as string)),
+    });
+  } catch (error) {
+    console.error('Get members error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/members/:id - Get single member with borrowing history
+router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const member = await prisma.member.findUnique({
+      where: { id },
+      include: {
+        borrowings: {
+          include: {
+            bookCopy: {
+              include: {
+                book: {
+                  select: { id: true, title: true, author: true },
+                },
+              },
+            },
+          },
+          orderBy: { borrowDate: 'desc' },
+          take: 50,
+        },
+      },
+    });
+
+    if (!member) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    res.json({
+      ...member,
+      activeLoans: member.borrowings.filter((b) => b.status === 'ACTIVE').length,
+    });
+  } catch (error) {
+    console.error('Get member error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/members - Create new member
+router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { firstName, lastName, email, phone, address, maxBooks } = req.body;
+
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({ error: 'First name, last name, and email are required' });
+    }
+
+    const memberNumber = await getNextMemberNumber();
+
+    const member = await prisma.member.create({
+      data: {
+        memberNumber,
+        firstName,
+        lastName,
+        email,
+        phone,
+        address,
+        maxBooks: maxBooks || 5,
+      },
+    });
+
+    res.status(201).json(member);
+  } catch (error: any) {
+    console.error('Create member error:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'A member with this email already exists' });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/members/:id - Update member
+router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, email, phone, address, status, maxBooks } = req.body;
+
+    const member = await prisma.member.update({
+      where: { id },
+      data: {
+        firstName,
+        lastName,
+        email,
+        phone,
+        address,
+        status,
+        maxBooks,
+      },
+    });
+
+    res.json(member);
+  } catch (error: any) {
+    console.error('Update member error:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'A member with this email already exists' });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/members/:id - Delete member (only if no active loans)
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const activeLoans = await prisma.borrowing.count({
+      where: { memberId: id, status: 'ACTIVE' },
+    });
+
+    if (activeLoans > 0) {
+      return res.status(400).json({ error: 'Cannot delete member with active loans' });
+    }
+
+    await prisma.member.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Delete member error:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
