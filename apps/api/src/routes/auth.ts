@@ -74,4 +74,43 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// PUT /api/auth/me - Update current user profile
+router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, email } = req.body;
+
+    // First find the user by email from token (more reliable than ID)
+    const existingUser = await prisma.user.findUnique({
+      where: { email: req.user!.email },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const updateData: { name?: string; email?: string } = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+
+    const user = await prisma.user.update({
+      where: { id: existingUser.id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
+
+    res.json(user);
+  } catch (error: any) {
+    console.error('Update user error:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Email already in use' });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

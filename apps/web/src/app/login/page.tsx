@@ -64,7 +64,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="admin@library.com"
+              placeholder="Enter your email"
               icon={<Mail className="h-4 w-4" />}
             />
 
@@ -105,16 +105,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-slate-100">
-            <p className="text-center text-xs text-slate-500 mb-2">
-              Demo credentials
-            </p>
-            <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
-              <code className="text-xs text-slate-600">
-                admin@library.com / admin123
-              </code>
-            </div>
-          </div>
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-400">

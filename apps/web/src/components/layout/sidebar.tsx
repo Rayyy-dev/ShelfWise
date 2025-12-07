@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   LogOut,
   Library,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +18,7 @@ const navigation = [
   { name: 'Books', href: '/books', icon: BookOpen },
   { name: 'Members', href: '/members', icon: Users },
   { name: 'Borrowings', href: '/borrowings', icon: ArrowLeftRight },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export function Sidebar() {

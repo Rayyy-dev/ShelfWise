@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '@shelfwise/database';
+import { prisma, Prisma } from '@shelfwise/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
@@ -9,10 +9,12 @@ const DEFAULT_LOAN_DAYS = 14;
 // GET /api/borrowings - List borrowings
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { status, memberId, page = '1', limit = '20' } = req.query;
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const { status, memberId } = req.query;
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.BorrowingWhereInput = {};
 
     if (status) {
       if (status === 'OVERDUE') {
@@ -43,7 +45,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
           },
         },
         skip,
-        take: parseInt(limit as string),
+        take: limit,
         orderBy: { borrowDate: 'desc' },
       }),
       prisma.borrowing.count({ where }),
@@ -58,8 +60,8 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     res.json({
       borrowings: borrowingsWithOverdue,
       total,
-      page: parseInt(page as string),
-      totalPages: Math.ceil(total / parseInt(limit as string)),
+      page,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
     console.error('Get borrowings error:', error);
@@ -275,14 +277,14 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Borrowing not found' });
     }
 
-    const updateData: any = {};
+    const updateData: Prisma.BorrowingUpdateInput = {};
 
     if (dueDate) {
       updateData.dueDate = new Date(dueDate);
     }
 
     if (status && status !== borrowing.status) {
-      updateData.status = status;
+      updateData.status = status as 'ACTIVE' | 'RETURNED';
 
       // If marking as returned, set return date and update book copy
       if (status === 'RETURNED' && borrowing.status === 'ACTIVE') {

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '@shelfwise/database';
+import { prisma, Prisma } from '@shelfwise/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
@@ -7,10 +7,12 @@ const router = Router();
 // GET /api/books - List all books with search/filter
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { search, category, page = '1', limit = '20' } = req.query;
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const { search, category } = req.query;
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.BookWhereInput = {};
 
     if (search) {
       where.OR = [
@@ -42,7 +44,7 @@ router.get('/', async (req: Request, res: Response) => {
           },
         },
         skip,
-        take: parseInt(limit as string),
+        take: limit,
         orderBy: { title: 'asc' },
       }),
       prisma.book.count({ where }),

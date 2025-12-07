@@ -1,0 +1,234 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { User, Mail, Shield, Clock, Building2, LogOut, Pencil, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Card } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { auth } from '@/lib/api';
+
+interface UserData {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<UserData | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  function handleLogout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.push('/login');
+  }
+
+  async function handleSaveProfile(updatedUser: UserData) {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setShowEditModal(false);
+  }
+
+  if (!user) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
+        <p className="text-slate-500 mt-1">Manage your account</p>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Profile Card */}
+        <Card className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-slate-900">Profile</h2>
+            <Button variant="secondary" size="sm" onClick={() => setShowEditModal(true)}>
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+              Edit
+            </Button>
+          </div>
+
+          <div className="flex items-start gap-6">
+            <div className="h-20 w-20 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+              <User className="h-10 w-10 text-indigo-600" />
+            </div>
+
+            <div className="space-y-4 flex-1">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm text-slate-500 mb-1">Name</label>
+                  <p className="font-medium text-slate-900">{user.name}</p>
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-500 mb-1">Role</label>
+                  <Badge variant={user.role === 'admin' ? 'default' : 'success'}>
+                    {user.role === 'admin' ? 'Administrator' : 'Librarian'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-500 mb-1">Email</label>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-slate-400" />
+                  <span className="text-slate-900">{user.email}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Quick Info */}
+        <Card>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Account Info</h2>
+          <dl className="space-y-4">
+            <div>
+              <dt className="flex items-center gap-2 text-sm text-slate-500">
+                <Shield className="h-4 w-4" />
+                Access Level
+              </dt>
+              <dd className="mt-1 font-medium text-slate-900">
+                {user.role === 'admin' ? 'Full Access' : 'Standard Access'}
+              </dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-2 text-sm text-slate-500">
+                <Building2 className="h-4 w-4" />
+                Organization
+              </dt>
+              <dd className="mt-1 font-medium text-slate-900">ShelfWise Library</dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-2 text-sm text-slate-500">
+                <Clock className="h-4 w-4" />
+                Session
+              </dt>
+              <dd className="mt-1 font-medium text-slate-900">Active</dd>
+            </div>
+          </dl>
+        </Card>
+
+        {/* Actions */}
+        <Card className="lg:col-span-3">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Actions</h2>
+          <div className="flex gap-3">
+            <Button variant="danger" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <EditProfileModal
+          user={user}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleSaveProfile}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditProfileModal({
+  user,
+  onClose,
+  onSave,
+}: {
+  user: UserData;
+  onClose: () => void;
+  onSave: (user: UserData) => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: user.name,
+    email: user.email,
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const updated = await auth.updateProfile({
+        name: formData.name,
+        email: formData.email,
+      });
+      onSave(updated);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
+      <Card className="w-full max-w-md">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-slate-900">Edit Profile</h2>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-100"
+          >
+            <X className="h-4 w-4 text-slate-500" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          <Input
+            label="Name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+          />
+
+          <Input
+            label="Email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            required
+          />
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={loading}>
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+}

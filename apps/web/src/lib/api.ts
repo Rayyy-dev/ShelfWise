@@ -42,6 +42,8 @@ export const auth = {
       body: JSON.stringify({ email, password }),
     }),
   me: () => fetchApi<any>('/api/auth/me'),
+  updateProfile: (data: { name?: string; email?: string }) =>
+    fetchApi<any>('/api/auth/me', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 // Books

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '@shelfwise/database';
+import { prisma, Prisma } from '@shelfwise/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
@@ -21,10 +21,12 @@ async function getNextMemberNumber(): Promise<string> {
 // GET /api/members - List all members
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { search, status, page = '1', limit = '20' } = req.query;
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const { search, status } = req.query;
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.MemberWhereInput = {};
 
     if (search) {
       where.OR = [
@@ -50,7 +52,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
           },
         },
         skip,
-        take: parseInt(limit as string),
+        take: limit,
         orderBy: { createdAt: 'desc' },
       }),
       prisma.member.count({ where }),
@@ -64,8 +66,8 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     res.json({
       members: membersWithActiveLoans,
       total,
-      page: parseInt(page as string),
-      totalPages: Math.ceil(total / parseInt(limit as string)),
+      page,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
     console.error('Get members error:', error);
