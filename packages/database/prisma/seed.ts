@@ -36,7 +36,7 @@ async function main() {
     { isbn: '9780525559474', title: 'The Midnight Library', author: 'Matt Haig', category: 'Fiction', description: 'A novel about infinite possibilities and second chances.', publishedYear: 2020, copies: ['BC-018'] },
     { isbn: '9780062316097', title: 'Sapiens', author: 'Yuval Noah Harari', category: 'Non-Fiction', description: 'A brief history of humankind.', publishedYear: 2011, copies: ['BC-019', 'BC-020'] },
     { isbn: '9780062457714', title: 'The Subtle Art of Not Giving a F*ck', author: 'Mark Manson', category: 'Self-Help', description: 'A counterintuitive approach to living a good life.', publishedYear: 2016, copies: ['BC-021'] },
-    { isbn: '9780399590528', title: 'Atomic Habits', author: 'James Clear', category: 'Self-Help', description: 'Tiny changes, remarkable results.', publishedYear: 2018, copies: ['BC-022', 'BC-023'] },
+    { isbn: '9780735211292', title: 'Atomic Habits', author: 'James Clear', category: 'Self-Help', description: 'Tiny changes, remarkable results.', publishedYear: 2018, copies: ['BC-022', 'BC-023'] },
     { isbn: '9780593139134', title: 'The Psychology of Money', author: 'Morgan Housel', category: 'Business', description: 'Timeless lessons on wealth, greed, and happiness.', publishedYear: 2020, copies: ['BC-024'] },
 
     // Science Fiction (8 books)
@@ -45,7 +45,7 @@ async function main() {
     { isbn: '9780553382563', title: 'Foundation', author: 'Isaac Asimov', category: 'Science Fiction', description: 'The story of the fall and rise of galactic civilization.', publishedYear: 1951, copies: ['BC-028', 'BC-029'] },
     { isbn: '9780345342966', title: 'Fahrenheit 451', author: 'Ray Bradbury', category: 'Science Fiction', description: 'A dystopian novel about book burning.', publishedYear: 1953, copies: ['BC-030'] },
     { isbn: '9780765382030', title: 'The Martian', author: 'Andy Weir', category: 'Science Fiction', description: 'An astronaut struggles to survive alone on Mars.', publishedYear: 2011, copies: ['BC-031', 'BC-032'] },
-    { isbn: '9780553380163', title: 'A Game of Thrones', author: 'George R.R. Martin', category: 'Fantasy', description: 'Epic fantasy of power and intrigue.', publishedYear: 1996, copies: ['BC-033', 'BC-034', 'BC-035'] },
+    { isbn: '9780553593716', title: 'A Game of Thrones', author: 'George R.R. Martin', category: 'Fantasy', description: 'Epic fantasy of power and intrigue.', publishedYear: 1996, copies: ['BC-033', 'BC-034', 'BC-035'] },
     { isbn: '9780812550702', title: 'Enders Game', author: 'Orson Scott Card', category: 'Science Fiction', description: 'A young genius trains to battle alien invaders.', publishedYear: 1985, copies: ['BC-036'] },
     { isbn: '9780316029186', title: 'Ready Player One', author: 'Ernest Cline', category: 'Science Fiction', description: 'A virtual reality treasure hunt.', publishedYear: 2011, copies: ['BC-037', 'BC-038'] },
 
@@ -54,14 +54,14 @@ async function main() {
     { isbn: '9780618640157', title: 'The Lord of the Rings', author: 'J.R.R. Tolkien', category: 'Fantasy', description: 'The epic quest to destroy the One Ring.', publishedYear: 1954, copies: ['BC-041', 'BC-042', 'BC-043'] },
     { isbn: '9780590353427', title: 'Harry Potter and the Sorcerers Stone', author: 'J.K. Rowling', category: 'Fantasy', description: 'The first book in the Harry Potter series.', publishedYear: 1997, copies: ['BC-044', 'BC-045', 'BC-046'] },
     { isbn: '9780439064873', title: 'Harry Potter and the Chamber of Secrets', author: 'J.K. Rowling', category: 'Fantasy', description: 'The second year at Hogwarts.', publishedYear: 1998, copies: ['BC-047', 'BC-048'] },
-    { isbn: '9780439136365', title: 'Harry Potter and the Prisoner of Azkaban', author: 'J.K. Rowling', category: 'Fantasy', description: 'Sirius Black escapes from Azkaban.', publishedYear: 1999, copies: ['BC-049'] },
+    { isbn: '9780439655484', title: 'Harry Potter and the Prisoner of Azkaban', author: 'J.K. Rowling', category: 'Fantasy', description: 'Sirius Black escapes from Azkaban.', publishedYear: 1999, copies: ['BC-049'] },
     { isbn: '9780062315007', title: 'The Name of the Wind', author: 'Patrick Rothfuss', category: 'Fantasy', description: 'The tale of Kvothe, a legendary figure.', publishedYear: 2007, copies: ['BC-050', 'BC-051'] },
     { isbn: '9780765311788', title: 'Mistborn', author: 'Brandon Sanderson', category: 'Fantasy', description: 'A heist story set in a world of ash and mist.', publishedYear: 2006, copies: ['BC-052'] },
     { isbn: '9780062255655', title: 'The Way of Kings', author: 'Brandon Sanderson', category: 'Fantasy', description: 'Epic fantasy with unique magic systems.', publishedYear: 2010, copies: ['BC-053', 'BC-054'] },
 
     // Non-Fiction (8 books)
     { isbn: '9780743226752', title: 'A Short History of Nearly Everything', author: 'Bill Bryson', category: 'Science', description: 'An exploration of science and the universe.', publishedYear: 2003, copies: ['BC-055'] },
-    { isbn: '9780553380163', title: 'A Brief History of Time', author: 'Stephen Hawking', category: 'Science', description: 'An exploration of cosmology for the general reader.', publishedYear: 1988, copies: ['BC-056', 'BC-057'] },
+    { isbn: '9780553109535', title: 'A Brief History of Time', author: 'Stephen Hawking', category: 'Science', description: 'An exploration of cosmology for the general reader.', publishedYear: 1988, copies: ['BC-056', 'BC-057'] },
     { isbn: '9780307474278', title: 'Outliers', author: 'Malcolm Gladwell', category: 'Non-Fiction', description: 'The story of success.', publishedYear: 2008, copies: ['BC-058'] },
     { isbn: '9780316346627', title: 'Thinking, Fast and Slow', author: 'Daniel Kahneman', category: 'Psychology', description: 'How we think and make decisions.', publishedYear: 2011, copies: ['BC-059', 'BC-060'] },
     { isbn: '9780399563829', title: 'Educated', author: 'Tara Westover', category: 'Memoir', description: 'A memoir about growing up in a survivalist family.', publishedYear: 2018, copies: ['BC-061'] },

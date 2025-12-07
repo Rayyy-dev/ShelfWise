@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeftRight, BookOpen, X, Barcode, User, Calendar, RotateCcw, CheckCircle2, Trash2 } from 'lucide-react';
 import { borrowings, members, books } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -54,6 +56,7 @@ interface AvailableCopy {
 }
 
 export default function BorrowingsPage() {
+  const router = useRouter();
   const [borrowingList, setBorrowingList] = useState<Borrowing[]>([]);
   const [memberList, setMemberList] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,7 +186,11 @@ export default function BorrowingsPage() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {borrowingList.map((borrowing) => (
-                  <tr key={borrowing.id} className="hover:bg-slate-50">
+                  <tr
+                    key={borrowing.id}
+                    className="hover:bg-slate-50 cursor-pointer"
+                    onClick={() => router.push(`/borrowings/${borrowing.id}`)}
+                  >
                     <td className="whitespace-nowrap px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-lg bg-indigo-50 flex items-center justify-center">
@@ -257,7 +264,7 @@ export default function BorrowingsPage() {
                           : 'Active'}
                       </Badge>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4">
+                    <td className="whitespace-nowrap px-5 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         {borrowing.status === 'ACTIVE' && (
                           <Button

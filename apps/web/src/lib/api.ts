@@ -93,6 +93,9 @@ export const borrowings = {
     if (params?.page) searchParams.set('page', params.page.toString());
     return fetchApi<any>(`/api/borrowings?${searchParams}`);
   },
+  get: (id: string) => fetchApi<any>(`/api/borrowings/${id}`),
+  update: (id: string, data: { dueDate?: string; status?: string }) =>
+    fetchApi<any>(`/api/borrowings/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   checkout: (data: { memberId: string; barcode: string; dueDate?: string }) =>
     fetchApi<any>('/api/borrowings/checkout', { method: 'POST', body: JSON.stringify(data) }),
   return: (id: string, data?: { condition?: string }) =>

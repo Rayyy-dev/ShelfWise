@@ -221,6 +221,113 @@ router.post('/:id/return', authMiddleware, async (req: AuthRequest, res: Respons
   }
 });
 
+// GET /api/borrowings/:id - Get single borrowing
+router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const borrowing = await prisma.borrowing.findUnique({
+      where: { id },
+      include: {
+        member: {
+          select: { id: true, firstName: true, lastName: true, memberNumber: true, email: true, phone: true },
+        },
+        bookCopy: {
+          include: {
+            book: { select: { id: true, title: true, author: true, isbn: true, category: true } },
+          },
+        },
+      },
+    });
+
+    if (!borrowing) {
+      return res.status(404).json({ error: 'Borrowing not found' });
+    }
+
+    const isOverdue = borrowing.status === 'ACTIVE' && new Date(borrowing.dueDate) < new Date();
+    const daysOverdue = isOverdue
+      ? Math.ceil((Date.now() - borrowing.dueDate.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    res.json({
+      ...borrowing,
+      isOverdue,
+      daysOverdue,
+    });
+  } catch (error) {
+    console.error('Get borrowing error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/borrowings/:id - Update borrowing (extend due date, etc.)
+router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { dueDate, status } = req.body;
+
+    const borrowing = await prisma.borrowing.findUnique({
+      where: { id },
+      include: { bookCopy: true },
+    });
+
+    if (!borrowing) {
+      return res.status(404).json({ error: 'Borrowing not found' });
+    }
+
+    const updateData: any = {};
+
+    if (dueDate) {
+      updateData.dueDate = new Date(dueDate);
+    }
+
+    if (status && status !== borrowing.status) {
+      updateData.status = status;
+
+      // If marking as returned, set return date and update book copy
+      if (status === 'RETURNED' && borrowing.status === 'ACTIVE') {
+        updateData.returnDate = new Date();
+        await prisma.bookCopy.update({
+          where: { id: borrowing.bookCopyId },
+          data: { status: 'AVAILABLE' },
+        });
+      }
+
+      // If reactivating a returned borrowing
+      if (status === 'ACTIVE' && borrowing.status === 'RETURNED') {
+        updateData.returnDate = null;
+        await prisma.bookCopy.update({
+          where: { id: borrowing.bookCopyId },
+          data: { status: 'BORROWED' },
+        });
+      }
+    }
+
+    const updated = await prisma.borrowing.update({
+      where: { id },
+      data: updateData,
+      include: {
+        member: {
+          select: { id: true, firstName: true, lastName: true, memberNumber: true },
+        },
+        bookCopy: {
+          include: {
+            book: { select: { id: true, title: true, author: true } },
+          },
+        },
+      },
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    console.error('Update borrowing error:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Borrowing not found' });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // DELETE /api/borrowings/:id - Delete a borrowing record
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
