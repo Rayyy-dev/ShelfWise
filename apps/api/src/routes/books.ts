@@ -279,11 +279,11 @@ router.post('/:id/copies', authMiddleware, async (req: AuthRequest, res: Respons
 router.put('/copies/:copyId', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { copyId } = req.params;
-    const { status, condition, shelfLocation } = req.body;
+    const { barcode, status, condition, shelfLocation } = req.body;
 
     const copy = await prisma.bookCopy.update({
       where: { id: copyId },
-      data: { status, condition, shelfLocation },
+      data: { barcode, status, condition, shelfLocation },
     });
 
     res.json(copy);

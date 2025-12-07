@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus, BookOpen } from 'lucide-react';
+import { ArrowLeft, Plus, BookOpen, Pencil, X, Trash2 } from 'lucide-react';
 import { books } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { Card } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 
 interface BookCopy {
   id: string;
@@ -40,10 +42,11 @@ interface BookDetail {
 
 export default function BookDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const [book, setBook] = useState<BookDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddCopyModal, setShowAddCopyModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCopy, setEditingCopy] = useState<BookCopy | null>(null);
 
   useEffect(() => {
     loadBook();
@@ -63,7 +66,7 @@ export default function BookDetailPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"></div>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
       </div>
     );
   }
@@ -72,7 +75,7 @@ export default function BookDetailPage() {
     return (
       <div className="text-center">
         <h2 className="text-lg font-semibold text-gray-900">Book not found</h2>
-        <Link href="/books" className="mt-4 text-primary-600 hover:underline">
+        <Link href="/books" className="mt-4 text-indigo-600 hover:underline">
           Back to catalog
         </Link>
       </div>
@@ -81,22 +84,28 @@ export default function BookDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <button
-          onClick={() => router.back()}
-          className="rounded-md p-2 hover:bg-gray-100"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900">{book.title}</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Link
+            href="/books"
+            className="rounded-md p-2 hover:bg-gray-100"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">{book.title}</h1>
+        </div>
+        <Button variant="secondary" onClick={() => setShowEditModal(true)}>
+          <Pencil className="mr-2 h-4 w-4" />
+          Edit Book
+        </Button>
       </div>
 
       {/* Book Info */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1">
           <div className="overflow-hidden rounded-lg bg-white shadow">
-            <div className="flex h-48 items-center justify-center bg-gray-100">
-              <BookOpen className="h-24 w-24 text-gray-300" />
+            <div className="relative h-48 bg-gray-100">
+              <BookCover isbn={book.isbn} title={book.title} />
             </div>
             <div className="p-4">
               <dl className="space-y-2 text-sm">
@@ -141,13 +150,10 @@ export default function BookDetailPage() {
               <h2 className="text-lg font-semibold text-gray-900">
                 Book Copies ({book.copies.length})
               </h2>
-              <button
-                onClick={() => setShowAddCopyModal(true)}
-                className="flex items-center rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
-              >
+              <Button onClick={() => setShowAddCopyModal(true)}>
                 <Plus className="mr-1 h-4 w-4" />
                 Add Copy
-              </button>
+              </Button>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -167,6 +173,9 @@ export default function BookDetailPage() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Borrowed By
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -213,6 +222,14 @@ export default function BookDetailPage() {
                             '-'
                           )}
                         </td>
+                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
+                          <button
+                            onClick={() => setEditingCopy(copy)}
+                            className="text-indigo-600 hover:text-indigo-900"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -234,7 +251,70 @@ export default function BookDetailPage() {
           }}
         />
       )}
+
+      {/* Edit Book Modal */}
+      {showEditModal && (
+        <EditBookModal
+          book={book}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false);
+            loadBook();
+          }}
+        />
+      )}
+
+      {/* Edit Copy Modal */}
+      {editingCopy && (
+        <EditCopyModal
+          copy={editingCopy}
+          onClose={() => setEditingCopy(null)}
+          onSuccess={() => {
+            setEditingCopy(null);
+            loadBook();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// Book cover component with fallback
+function BookCover({ isbn, title }: { isbn: string | null; title: string }) {
+  const [imgError, setImgError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const coverUrl = isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg` : null;
+
+  if (imgError || !isbn || !coverUrl) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+        <BookOpen className="h-16 w-16 text-gray-300" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {!loaded && (
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-100">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-indigo-600"></div>
+        </div>
+      )}
+      <img
+        src={coverUrl}
+        alt={title}
+        className={`w-full h-full object-cover ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={(e) => {
+          const img = e.target as HTMLImageElement;
+          if (img.naturalWidth <= 1 || img.naturalHeight <= 1) {
+            setImgError(true);
+          } else {
+            setLoaded(true);
+          }
+        }}
+        onError={() => setImgError(true)}
+      />
+    </>
   );
 }
 
@@ -271,38 +351,40 @@ function AddCopyModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-gray-900">Add Book Copy</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
+      <Card className="w-full max-w-md">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-gray-900">Add Book Copy</h2>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-100"
+          >
+            <X className="h-4 w-4 text-slate-500" />
+          </button>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
               {error}
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Barcode *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.barcode}
-              onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            />
-          </div>
+          <Input
+            label="Barcode"
+            required
+            value={formData.barcode}
+            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+          />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Condition
             </label>
             <select
               value={formData.condition}
               onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="NEW">New</option>
               <option value="GOOD">Good</option>
@@ -311,37 +393,257 @@ function AddCopyModal({
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Shelf Location
-            </label>
-            <input
-              type="text"
-              value={formData.shelfLocation}
-              onChange={(e) => setFormData({ ...formData, shelfLocation: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              placeholder="e.g., A-12-3"
+          <Input
+            label="Shelf Location"
+            value={formData.shelfLocation}
+            onChange={(e) => setFormData({ ...formData, shelfLocation: e.target.value })}
+            placeholder="e.g., A-12-3"
+          />
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="secondary" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={loading}>
+              Add Copy
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+function EditBookModal({
+  book,
+  onClose,
+  onSuccess,
+}: {
+  book: BookDetail;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    title: book.title,
+    author: book.author,
+    category: book.category,
+    isbn: book.isbn || '',
+    description: book.description || '',
+    publishedYear: book.publishedYear?.toString() || '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      await books.update(book.id, {
+        ...formData,
+        publishedYear: formData.publishedYear ? parseInt(formData.publishedYear) : null,
+      });
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
+      <Card className="w-full max-w-lg">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-slate-900">Edit Book</h2>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-100"
+          >
+            <X className="h-4 w-4 text-slate-500" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          <Input
+            label="Title"
+            required
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          />
+
+          <Input
+            label="Author"
+            required
+            value={formData.author}
+            onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Category"
+              required
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            />
+            <Input
+              label="ISBN"
+              value={formData.isbn}
+              onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
+              placeholder="For book cover"
             />
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+          <Input
+            label="Published Year"
+            type="number"
+            value={formData.publishedYear}
+            onChange={(e) => setFormData({ ...formData, publishedYear: e.target.value })}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="secondary" type="button" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
-            >
-              {loading ? 'Adding...' : 'Add Copy'}
-            </button>
+            </Button>
+            <Button type="submit" isLoading={loading}>
+              Save Changes
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
+    </div>
+  );
+}
+
+function EditCopyModal({
+  copy,
+  onClose,
+  onSuccess,
+}: {
+  copy: BookCopy;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    barcode: copy.barcode,
+    condition: copy.condition,
+    shelfLocation: copy.shelfLocation || '',
+    status: copy.status,
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      await books.updateCopy(copy.id, formData);
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
+      <Card className="w-full max-w-md">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-slate-900">Edit Copy</h2>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-100"
+          >
+            <X className="h-4 w-4 text-slate-500" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          <Input
+            label="Barcode"
+            required
+            value={formData.barcode}
+            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="AVAILABLE">Available</option>
+              <option value="BORROWED">Borrowed</option>
+              <option value="RESERVED">Reserved</option>
+              <option value="MAINTENANCE">Maintenance</option>
+              <option value="LOST">Lost</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Condition
+            </label>
+            <select
+              value={formData.condition}
+              onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="NEW">New</option>
+              <option value="GOOD">Good</option>
+              <option value="FAIR">Fair</option>
+              <option value="POOR">Poor</option>
+            </select>
+          </div>
+
+          <Input
+            label="Shelf Location"
+            value={formData.shelfLocation}
+            onChange={(e) => setFormData({ ...formData, shelfLocation: e.target.value })}
+            placeholder="e.g., A-12-3"
+          />
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="secondary" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={loading}>
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Card>
     </div>
   );
 }

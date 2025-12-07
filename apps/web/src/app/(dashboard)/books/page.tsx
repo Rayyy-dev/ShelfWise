@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Plus, Search, BookOpen, X } from 'lucide-react';
 import { books } from '@/lib/api';
 import { Card } from '@/components/ui';
@@ -24,23 +23,81 @@ export default function BooksPage() {
   const [bookList, setBookList] = useState<Book[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [total, setTotal] = useState(0);
+  const observerRef = useRef<HTMLDivElement>(null);
 
+  // Load categories once
   useEffect(() => {
-    loadBooks();
     loadCategories();
+  }, []);
+
+  // Reset and load when search/category changes
+  useEffect(() => {
+    setBookList([]);
+    setPage(1);
+    setHasMore(true);
+    setLoading(true);
+    loadBooks(1, true);
   }, [search, selectedCategory]);
 
-  async function loadBooks() {
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          setPage((p) => p + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore]);
+
+  // Load more when page changes (but not on initial load)
+  useEffect(() => {
+    if (page > 1) {
+      loadBooks(page, false);
+    }
+  }, [page]);
+
+  async function loadBooks(pageNum: number, reset: boolean) {
+    if (reset) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
-      const result = await books.list({ search, category: selectedCategory || undefined });
-      setBookList(result.books);
+      const result = await books.list({
+        search,
+        category: selectedCategory || undefined,
+        page: pageNum,
+      });
+
+      if (reset) {
+        setBookList(result.books);
+      } else {
+        setBookList((prev) => [...prev, ...result.books]);
+      }
+
+      setTotal(result.total);
+      setHasMore(result.page < result.totalPages);
     } catch (err) {
       console.error('Failed to load books:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }
 
@@ -97,38 +154,54 @@ export default function BooksPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-indigo-600"></div>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {bookList.map((book) => (
-            <Link key={book.id} href={`/books/${book.id}`}>
-              <Card hover className="h-full p-0 overflow-hidden">
-                <div className="flex gap-4 p-4">
-                  {/* Book Cover */}
-                  <div className="relative h-24 w-16 flex-shrink-0 bg-slate-100 rounded overflow-hidden">
-                    <BookCover isbn={book.isbn} title={book.title} />
-                  </div>
+        <>
+          {bookList.length > 0 && (
+            <p className="text-sm text-slate-500">
+              Showing {bookList.length} of {total} books
+            </p>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {bookList.map((book) => (
+              <Link key={book.id} href={`/books/${book.id}`}>
+                <Card hover className="h-full p-0 overflow-hidden">
+                  <div className="flex gap-4 p-4">
+                    {/* Book Cover */}
+                    <div className="relative h-24 w-16 flex-shrink-0 bg-slate-100 rounded overflow-hidden">
+                      <BookCover isbn={book.isbn} title={book.title} />
+                    </div>
 
-                  {/* Book Info */}
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <h3 className="font-medium text-slate-900 text-sm line-clamp-2 mb-1">
-                      {book.title}
-                    </h3>
-                    <p className="text-xs text-slate-500 truncate mb-2">{book.author}</p>
-                    <div className="mt-auto flex items-center justify-between">
-                      <Badge variant="default" className="text-xs">{book.category}</Badge>
-                      <span
-                        className={`text-xs font-medium ${
-                          book.availableCopies > 0 ? 'text-emerald-600' : 'text-red-600'
-                        }`}
-                      >
-                        {book.availableCopies}/{book.totalCopies}
-                      </span>
+                    {/* Book Info */}
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <h3 className="font-medium text-slate-900 text-sm line-clamp-2 mb-1">
+                        {book.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 truncate mb-2">{book.author}</p>
+                      <div className="mt-auto flex items-center justify-between">
+                        <Badge variant="default" className="text-xs">{book.category}</Badge>
+                        <span
+                          className={`text-xs font-medium ${
+                            book.availableCopies > 0 ? 'text-emerald-600' : 'text-red-600'
+                          }`}
+                        >
+                          {book.availableCopies}/{book.totalCopies}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          {/* Infinite scroll trigger */}
+          {hasMore && (
+            <div ref={observerRef} className="flex justify-center py-4">
+              {loadingMore && (
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-indigo-600"></div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {!loading && bookList.length === 0 && (
@@ -161,7 +234,10 @@ export default function BooksPage() {
           onClose={() => setShowAddModal(false)}
           onSuccess={() => {
             setShowAddModal(false);
-            loadBooks();
+            setBookList([]);
+            setPage(1);
+            setHasMore(true);
+            loadBooks(1, true);
           }}
         />
       )}

@@ -63,6 +63,8 @@ export const books = {
   delete: (id: string) => fetchApi<any>(`/api/books/${id}`, { method: 'DELETE' }),
   addCopy: (bookId: string, data: { barcode: string; condition?: string; shelfLocation?: string }) =>
     fetchApi<any>(`/api/books/${bookId}/copies`, { method: 'POST', body: JSON.stringify(data) }),
+  updateCopy: (copyId: string, data: { barcode?: string; status?: string; condition?: string; shelfLocation?: string }) =>
+    fetchApi<any>(`/api/books/copies/${copyId}`, { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 // Members
