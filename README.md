@@ -135,6 +135,12 @@ The application features a modern glass morphism design with:
 - Glass-effect cards and modals
 - Smooth hover animations
 - Responsive layout for all screen sizes
+  
+<img width="1914" height="910" alt="Screenshot 2025-12-07 025915" src="https://github.com/user-attachments/assets/98a21a41-b5b8-4c2c-8602-6e9083899e58" />
+
+<img width="1919" height="904" alt="Screenshot 2025-12-07 025930" src="https://github.com/user-attachments/assets/a99908ce-0385-4472-9391-9a4211719b38" />
+
+<img width="1915" height="907" alt="Screenshot 2025-12-07 030001" src="https://github.com/user-attachments/assets/b14f2a37-42af-4933-b975-300883247550" />
 
 ## License
 
