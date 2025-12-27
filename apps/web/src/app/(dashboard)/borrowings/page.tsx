@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftRight, BookOpen, X, Barcode, User, Calendar, RotateCcw, CheckCircle2, Trash2 } from 'lucide-react';
+import { ArrowLeftRight, BookOpen, X, Barcode, User, Calendar, RotateCcw, CheckCircle2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { borrowings, members, books } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Card } from '@/components/ui';
@@ -63,18 +63,32 @@ export default function BorrowingsPage() {
   const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [deletingBorrowing, setDeletingBorrowing] = useState<Borrowing | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
 
   useEffect(() => {
     loadBorrowings();
+  }, [statusFilter, page]);
+
+  useEffect(() => {
     loadMembers();
-  }, [statusFilter]);
+  }, []);
 
   async function loadBorrowings() {
+    setLoading(true);
     try {
       const result = await borrowings.list({
         status: statusFilter || undefined,
+        page,
       });
       setBorrowingList(result.borrowings);
+      setTotalPages(result.totalPages || 1);
+      setTotal(result.total || result.borrowings.length);
     } catch (err) {
       console.error('Failed to load borrowings:', err);
     } finally {
@@ -161,25 +175,19 @@ export default function BorrowingsPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                     Book
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                     Member
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                    Barcode
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                    Borrowed
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                     Due Date
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                     Status
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                     Actions
                   </th>
                 </tr>
@@ -191,63 +199,43 @@ export default function BorrowingsPage() {
                     className="hover:bg-slate-50 cursor-pointer"
                     onClick={() => router.push(`/borrowings/${borrowing.id}`)}
                   >
-                    <td className="whitespace-nowrap px-5 py-4">
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-lg bg-indigo-50 flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
                           <BookOpen className="h-4 w-4 text-indigo-600" />
                         </div>
-                        <div>
-                          <p className="font-medium text-slate-900 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-900 text-sm truncate max-w-[200px]">
                             {borrowing.bookCopy.book.title}
                           </p>
-                          <p className="text-xs text-slate-500">
-                            {borrowing.bookCopy.book.author}
+                          <p className="text-xs text-slate-500 font-mono">
+                            {borrowing.bookCopy.barcode}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4">
+                    <td className="whitespace-nowrap px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center">
+                        <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
                           <User className="h-3 w-3 text-slate-500" />
                         </div>
-                        <div>
-                          <p className="text-sm text-slate-900">
+                        <div className="min-w-0">
+                          <p className="text-sm text-slate-900 truncate max-w-[120px]">
                             {borrowing.member.firstName} {borrowing.member.lastName}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {borrowing.member.memberNumber}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4">
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <Barcode className="h-3 w-3 text-slate-400" />
-                        <span className="font-mono text-xs">{borrowing.bookCopy.barcode}</span>
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-4">
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <Calendar className="h-3 w-3 text-slate-400" />
-                        {formatDate(borrowing.borrowDate)}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-4">
-                      <div className={`flex items-center gap-2 text-sm ${
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className={`text-sm ${
                         borrowing.isOverdue && borrowing.status !== 'RETURNED'
                           ? 'text-red-600 font-medium'
                           : 'text-slate-600'
                       }`}>
-                        <Calendar className={`h-3 w-3 ${
-                          borrowing.isOverdue && borrowing.status !== 'RETURNED'
-                            ? 'text-red-400'
-                            : 'text-slate-400'
-                        }`} />
                         {formatDate(borrowing.dueDate)}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4">
+                    <td className="whitespace-nowrap px-4 py-3">
                       <Badge
                         variant={
                           borrowing.status === 'RETURNED'
@@ -264,27 +252,25 @@ export default function BorrowingsPage() {
                           : 'Active'}
                       </Badge>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-2">
+                    <td className="whitespace-nowrap px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1">
                         {borrowing.status === 'ACTIVE' && (
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => handleReturn(borrowing.id)}
                           >
-                            <RotateCcw className="mr-1 h-3 w-3" />
-                            Return
+                            <RotateCcw className="h-3 w-3" />
                           </Button>
                         )}
                         {borrowing.status === 'RETURNED' && (
-                          <div className="flex items-center gap-2 text-sm text-emerald-600">
-                            <CheckCircle2 className="h-4 w-4" />
+                          <span className="text-xs text-emerald-600">
                             {formatDate(borrowing.returnDate!)}
-                          </div>
+                          </span>
                         )}
                         <button
                           onClick={() => setDeletingBorrowing(borrowing)}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete record"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -295,7 +281,7 @@ export default function BorrowingsPage() {
                 ))}
                 {borrowingList.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center">
+                    <td colSpan={5} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center">
                           <ArrowLeftRight className="h-6 w-6 text-slate-400" />
@@ -309,6 +295,38 @@ export default function BorrowingsPage() {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* Pagination */}
+      {!loading && borrowingList.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-slate-500">
+            {total} borrowings
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <span className="text-sm text-slate-600 px-3">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Checkout Modal */}

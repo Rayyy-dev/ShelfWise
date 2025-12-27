@@ -1,11 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BookOpen, Users, ArrowLeftRight, AlertTriangle } from 'lucide-react';
+import { BookOpen, Users, ArrowLeftRight, AlertTriangle, TrendingUp, Clock } from 'lucide-react';
 import { dashboard } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Card } from '@/components/ui';
 import { Badge } from '@/components/ui';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 interface Stats {
   totalBooks: number;
@@ -69,6 +79,13 @@ export default function DashboardPage() {
 
   const { stats, recentBorrowings } = data;
 
+  // Prepare activity data
+  const activityData = [
+    { name: 'Books', total: stats.totalBooks, active: stats.totalCopies },
+    { name: 'Members', total: stats.totalMembers, active: stats.activeMembers },
+    { name: 'Loans', total: stats.activeBorrowings + stats.overdueBorrowings, active: stats.activeBorrowings },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -129,6 +146,74 @@ export default function DashboardPage() {
             </div>
             <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${stats.overdueBorrowings > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
               <AlertTriangle className={`h-5 w-5 ${stats.overdueBorrowings > 0 ? 'text-red-600' : 'text-slate-400'}`} />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Collection Summary */}
+        <Card>
+          <h3 className="font-semibold text-slate-900 mb-4">Collection Summary</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={activityData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="total" fill="#6366f1" name="Total" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="active" fill="#10b981" name="Active" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Quick Stats */}
+        <Card>
+          <h3 className="font-semibold text-slate-900 mb-4">Today's Activity</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-indigo-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600">Books Borrowed</p>
+                  <p className="text-xl font-semibold text-slate-900">{stats.borrowingsToday}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <ArrowLeftRight className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600">Books Returned</p>
+                  <p className="text-xl font-semibold text-slate-900">{stats.returnsToday}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600">Available Copies</p>
+                  <p className="text-xl font-semibold text-slate-900">{stats.availableCopies} <span className="text-sm font-normal text-slate-500">/ {stats.totalCopies}</span></p>
+                </div>
+              </div>
             </div>
           </div>
         </Card>

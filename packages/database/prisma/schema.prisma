@@ -69,6 +69,19 @@ model Borrowing {
   dueDate    DateTime
   returnDate DateTime?
   status     String    @default("ACTIVE") // ACTIVE, RETURNED, OVERDUE
+  fines      Fine[]
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+}
+
+model Fine {
+  id          String    @id @default(cuid())
+  borrowing   Borrowing @relation(fields: [borrowingId], references: [id])
+  borrowingId String
+  amount      Float
+  reason      String    // OVERDUE, DAMAGE, LOST
+  status      String    @default("PENDING") // PENDING, PAID, WAIVED
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

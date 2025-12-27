@@ -1,0 +1,99 @@
+// ShelfWise Library Management System - Entity Relationship Diagram
+// Use this file with dbdiagram.io to generate visual ERD
+
+// =============================================
+// USER - Library staff who manage the system
+// =============================================
+Table User {
+  id String [pk]
+  email String [unique, not null]
+  passwordHash String [not null]
+  name String [not null]
+  role String [not null, default: 'LIBRARIAN', note: 'ADMIN or LIBRARIAN']
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+}
+
+// =============================================
+// BOOK - Represents a book title in the catalog
+// =============================================
+Table Book {
+  id String [pk]
+  isbn String [unique]
+  title String [not null]
+  author String [not null]
+  category String [not null]
+  description String
+  publishedYear Int
+  coverImage String
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+}
+
+// =============================================
+// BOOK_COPY - Individual physical copies of books
+// =============================================
+Table BookCopy {
+  id String [pk]
+  bookId String [not null, ref: > Book.id]
+  barcode String [unique, not null]
+  status String [not null, default: 'AVAILABLE', note: 'AVAILABLE, BORROWED, MAINTENANCE, LOST']
+  condition String [not null, default: 'GOOD', note: 'NEW, GOOD, FAIR, POOR']
+  shelfLocation String
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+}
+
+// =============================================
+// MEMBER - Library patrons who can borrow books
+// =============================================
+Table Member {
+  id String [pk]
+  memberNumber String [unique, not null, note: 'Format: LIB-001, LIB-002...']
+  firstName String [not null]
+  lastName String [not null]
+  email String [unique, not null]
+  phone String
+  address String
+  status String [not null, default: 'ACTIVE', note: 'ACTIVE, SUSPENDED, EXPIRED']
+  maxBooks Int [not null, default: 5]
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+}
+
+// =============================================
+// BORROWING - Records of book loans
+// =============================================
+Table Borrowing {
+  id String [pk]
+  memberId String [not null, ref: > Member.id]
+  bookCopyId String [not null, ref: > BookCopy.id]
+  borrowDate DateTime [not null, default: `now()`]
+  dueDate DateTime [not null]
+  returnDate DateTime
+  status String [not null, default: 'ACTIVE', note: 'ACTIVE, RETURNED']
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+}
+
+// =============================================
+// FINE - Financial penalties for overdue/damaged books
+// =============================================
+Table Fine {
+  id String [pk]
+  borrowingId String [not null, ref: > Borrowing.id]
+  amount Float [not null]
+  reason String [not null, note: 'OVERDUE, DAMAGE, LOST']
+  status String [not null, default: 'PENDING', note: 'PENDING, PAID, WAIVED']
+  paidAt DateTime
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+}
+
+// =============================================
+// RELATIONSHIPS SUMMARY
+// =============================================
+// Book 1:N BookCopy - One book can have many physical copies
+// Member 1:N Borrowing - One member can have many borrowings
+// BookCopy 1:N Borrowing - One copy can be borrowed multiple times
+// Borrowing 1:N Fine - One borrowing can have multiple fines

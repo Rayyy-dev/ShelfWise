@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Search, Users, Mail, Phone, X, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Users, Mail, Phone, X, Calendar, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { members } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Card } from '@/components/ui';
@@ -30,15 +30,25 @@ export default function MembersPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [deletingMember, setDeletingMember] = useState<Member | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   useEffect(() => {
     loadMembers();
-  }, [search]);
+  }, [search, page]);
 
   async function loadMembers() {
+    setLoading(true);
     try {
-      const result = await members.list({ search: search || undefined });
+      const result = await members.list({ search: search || undefined, page });
       setMemberList(result.members);
+      setTotalPages(result.totalPages || 1);
+      setTotal(result.total || result.members.length);
     } catch (err) {
       console.error('Failed to load members:', err);
     } finally {
@@ -91,22 +101,19 @@ export default function MembersPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                     Member
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                    Contact
+                  <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    Email
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                     Status
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                    Active Loans
+                  <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    Loans
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                    Joined
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                     Actions
                   </th>
                 </tr>
@@ -114,15 +121,15 @@ export default function MembersPage() {
               <tbody className="divide-y divide-slate-200">
                 {memberList.map((member) => (
                   <tr key={member.id} className="hover:bg-slate-50">
-                    <td className="whitespace-nowrap px-5 py-4">
+                    <td className="whitespace-nowrap px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-indigo-100 flex items-center justify-center">
-                          <span className="text-sm font-medium text-indigo-600">
+                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-medium text-indigo-600">
                             {member.firstName[0]}{member.lastName[0]}
                           </span>
                         </div>
-                        <div>
-                          <p className="font-medium text-slate-900 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-900 text-sm truncate">
                             {member.firstName} {member.lastName}
                           </p>
                           <p className="text-xs text-slate-500">
@@ -131,19 +138,13 @@ export default function MembersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Mail className="h-3 w-3 text-slate-400" />
-                          {member.email}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-500">
-                          <Phone className="h-3 w-3 text-slate-400" />
-                          {member.phone || '-'}
-                        </div>
+                    <td className="hidden md:table-cell whitespace-nowrap px-4 py-3">
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <Mail className="h-3 w-3 text-slate-400" />
+                        {member.email}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4">
+                    <td className="whitespace-nowrap px-4 py-3">
                       <Badge
                         variant={
                           member.status === 'ACTIVE'
@@ -156,31 +157,25 @@ export default function MembersPage() {
                         {member.status}
                       </Badge>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4">
+                    <td className="hidden sm:table-cell whitespace-nowrap px-4 py-3">
                       <span className={`text-sm font-medium ${
                         member.activeLoans > 0 ? 'text-indigo-600' : 'text-slate-400'
                       }`}>
-                        {member.activeLoans} books
+                        {member.activeLoans}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4">
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <Calendar className="h-3 w-3 text-slate-400" />
-                        {formatDate(member.createdAt)}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className="flex items-center gap-1">
                         <button
                           onClick={() => setEditingMember(member)}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                           title="Edit member"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => setDeletingMember(member)}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete member"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -191,7 +186,7 @@ export default function MembersPage() {
                 ))}
                 {memberList.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center">
+                    <td colSpan={5} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center">
                           <Users className="h-6 w-6 text-slate-400" />
@@ -228,6 +223,38 @@ export default function MembersPage() {
             loadMembers();
           }}
         />
+      )}
+
+      {/* Pagination */}
+      {!loading && memberList.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-slate-500">
+            {total} members
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <span className="text-sm text-slate-600 px-3">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Delete Confirmation Modal */}

@@ -7,6 +7,8 @@ import {
   BookOpen,
   Users,
   ArrowLeftRight,
+  DollarSign,
+  FileText,
   LogOut,
   Library,
   Settings,
@@ -18,6 +20,8 @@ const navigation = [
   { name: 'Books', href: '/books', icon: BookOpen },
   { name: 'Members', href: '/members', icon: Users },
   { name: 'Borrowings', href: '/borrowings', icon: ArrowLeftRight },
+  { name: 'Fines', href: '/fines', icon: DollarSign },
+  { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

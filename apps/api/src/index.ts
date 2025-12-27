@@ -8,6 +8,8 @@ import booksRoutes from './routes/books.js';
 import membersRoutes from './routes/members.js';
 import borrowingsRoutes from './routes/borrowings.js';
 import dashboardRoutes from './routes/dashboard.js';
+import finesRoutes from './routes/fines.js';
+import reportsRoutes from './routes/reports.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -350,6 +352,8 @@ app.use('/api/books', booksRoutes);
 app.use('/api/members', membersRoutes);
 app.use('/api/borrowings', borrowingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/fines', finesRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // Error handler
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

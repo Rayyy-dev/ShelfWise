@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Plus, Search, BookOpen, X } from 'lucide-react';
 import { books } from '@/lib/api';
 import { Card } from '@/components/ui';
@@ -11,7 +12,7 @@ import { Badge } from '@/components/ui';
 
 interface Book {
   id: string;
-  isbn: string;
+  isbn: string | null;
   title: string;
   author: string;
   category: string;
@@ -163,24 +164,26 @@ export default function BooksPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {bookList.map((book) => (
               <Link key={book.id} href={`/books/${book.id}`}>
-                <Card hover className="h-full p-0 overflow-hidden">
+                <Card hover className="h-full p-0 overflow-hidden group">
                   <div className="flex gap-4 p-4">
                     {/* Book Cover */}
-                    <div className="relative h-24 w-16 flex-shrink-0 bg-slate-100 rounded overflow-hidden">
-                      <BookCover isbn={book.isbn} title={book.title} />
+                    <div className="relative h-20 w-14 flex-shrink-0 rounded-md overflow-hidden shadow-sm group-hover:shadow-md transition-shadow">
+                      <BookCover isbn={book.isbn} title={book.title} category={book.category} />
                     </div>
 
                     {/* Book Info */}
                     <div className="flex flex-col min-w-0 flex-1">
-                      <h3 className="font-medium text-slate-900 text-sm line-clamp-2 mb-1">
+                      <h3 className="font-medium text-slate-900 text-sm line-clamp-2 mb-1 group-hover:text-indigo-600 transition-colors">
                         {book.title}
                       </h3>
                       <p className="text-xs text-slate-500 truncate mb-2">{book.author}</p>
                       <div className="mt-auto flex items-center justify-between">
-                        <Badge variant="default" className="text-xs">{book.category}</Badge>
+                        <span className="text-xs text-slate-400">{book.category}</span>
                         <span
-                          className={`text-xs font-medium ${
-                            book.availableCopies > 0 ? 'text-emerald-600' : 'text-red-600'
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            book.availableCopies > 0
+                              ? 'text-emerald-700 bg-emerald-50'
+                              : 'text-red-700 bg-red-50'
                           }`}
                         >
                           {book.availableCopies}/{book.totalCopies}
@@ -245,16 +248,48 @@ export default function BooksPage() {
   );
 }
 
-// Book cover component with fallback
-function BookCover({ isbn, title }: { isbn: string | null; title: string }) {
+// Category color mapping for fallback
+const CATEGORY_COLORS: Record<string, string> = {
+  'Fiction': 'bg-indigo-500',
+  'Science Fiction': 'bg-purple-500',
+  'Fantasy': 'bg-violet-500',
+  'Mystery': 'bg-slate-600',
+  'Thriller': 'bg-red-500',
+  'Romance': 'bg-pink-500',
+  'Horror': 'bg-gray-800',
+  'Biography': 'bg-amber-500',
+  'History': 'bg-orange-500',
+  'Science': 'bg-cyan-500',
+  'Technology': 'bg-blue-500',
+  'Philosophy': 'bg-teal-500',
+  'Psychology': 'bg-rose-500',
+  'Business': 'bg-emerald-500',
+  'Self-Help': 'bg-lime-500',
+  'Poetry': 'bg-fuchsia-500',
+  'Art': 'bg-yellow-500',
+  'Travel': 'bg-sky-500',
+  'Cooking': 'bg-orange-400',
+  'Health': 'bg-green-500',
+  'Non-Fiction': 'bg-teal-600',
+  'Young Adult': 'bg-pink-400',
+  'Children': 'bg-yellow-400',
+  'Drama': 'bg-red-400',
+};
+
+// Book cover with Open Library API and colored fallback
+// Uses Next.js Image with lazy loading to prevent rate limiting
+function BookCover({ isbn, title, category }: { isbn: string | null; title: string; category: string }) {
   const [imgError, setImgError] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const coverUrl = isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg` : null;
+  const bgColor = CATEGORY_COLORS[category] || 'bg-indigo-500';
+  const initial = title.charAt(0).toUpperCase();
 
-  if (imgError || !isbn || !coverUrl) {
+  // If no ISBN or image failed, show colored fallback
+  if (!isbn || !coverUrl || imgError) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-slate-100">
-        <BookOpen className="h-6 w-6 text-slate-300" />
+      <div className={`w-full h-full flex items-center justify-center ${bgColor} text-white`}>
+        <span className="text-lg font-bold">{initial}</span>
       </div>
     );
   }
@@ -262,23 +297,18 @@ function BookCover({ isbn, title }: { isbn: string | null; title: string }) {
   return (
     <>
       {!loaded && (
-        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-slate-100">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-indigo-600"></div>
+        <div className={`absolute inset-0 w-full h-full flex items-center justify-center ${bgColor} text-white`}>
+          <span className="text-lg font-bold">{initial}</span>
         </div>
       )}
-      <img
+      <Image
         src={coverUrl}
         alt={title}
-        className={`w-full h-full object-cover ${loaded ? 'opacity-100' : 'opacity-0'}`}
-        onLoad={(e) => {
-          const img = e.target as HTMLImageElement;
-          // Open Library returns 1x1 pixel when no cover found
-          if (img.naturalWidth <= 1 || img.naturalHeight <= 1) {
-            setImgError(true);
-          } else {
-            setLoaded(true);
-          }
-        }}
+        fill
+        sizes="56px"
+        unoptimized
+        className={`object-cover transition-opacity ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => setLoaded(true)}
         onError={() => setImgError(true)}
       />
     </>
