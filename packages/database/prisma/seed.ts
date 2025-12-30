@@ -35,6 +35,13 @@ async function main() {
   // Note: NOT deleting users - preserving areeha.usman@student.wsb.edu.pl
   console.log('Preserved existing user accounts');
 
+  // Promote user to ADMIN
+  await prisma.user.updateMany({
+    where: { email: 'areeha.usman@student.wsb.edu.pl' },
+    data: { role: 'ADMIN' },
+  });
+  console.log('Updated areeha.usman@student.wsb.edu.pl to ADMIN role');
+
   // Extended book data - 300+ books
   const categories = ['Fiction', 'Science Fiction', 'Fantasy', 'Mystery', 'Romance', 'Thriller', 'Horror', 'Non-Fiction', 'Biography', 'History', 'Science', 'Technology', 'Business', 'Self-Help', 'Psychology', 'Philosophy', 'Poetry', 'Drama', 'Children', 'Young Adult'];
 
