@@ -59,7 +59,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       prisma.member.count({ where }),
     ]);
 
-    const membersWithActiveLoans = members.map((member) => ({
+    const membersWithActiveLoans = members.map((member: any) => ({
       ...member,
       activeLoans: member._count.borrowings,
     }));
@@ -106,7 +106,7 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     res.json({
       ...member,
-      activeLoans: member.borrowings.filter((b) => b.status === 'ACTIVE').length,
+      activeLoans: member.borrowings.filter((b: any) => b.status === 'ACTIVE').length,
     });
   } catch (error) {
     console.error('Get member error:', error);

@@ -18,7 +18,7 @@ router.get('/books', authMiddleware, async (req: AuthRequest, res: Response) => 
       orderBy: { title: 'asc' },
     });
 
-    const reportData = books.map(book => ({
+    const reportData = books.map((book: any) => ({
       id: book.id,
       isbn: book.isbn || 'N/A',
       title: book.title,
@@ -26,15 +26,15 @@ router.get('/books', authMiddleware, async (req: AuthRequest, res: Response) => 
       category: book.category,
       publishedYear: book.publishedYear || 'N/A',
       totalCopies: book.copies.length,
-      availableCopies: book.copies.filter(c => c.status === 'AVAILABLE').length,
-      borrowedCopies: book.copies.filter(c => c.status === 'BORROWED').length,
+      availableCopies: book.copies.filter((c: any) => c.status === 'AVAILABLE').length,
+      borrowedCopies: book.copies.filter((c: any) => c.status === 'BORROWED').length,
     }));
 
     if (format === 'csv') {
       const headers = ['ID', 'ISBN', 'Title', 'Author', 'Category', 'Published Year', 'Total Copies', 'Available', 'Borrowed'];
       const csvRows = [
         headers.join(','),
-        ...reportData.map(row => [
+        ...reportData.map((row: any) => [
           row.id,
           `"${row.isbn}"`,
           `"${row.title.replace(/"/g, '""')}"`,
@@ -77,7 +77,7 @@ router.get('/members', authMiddleware, async (req: AuthRequest, res: Response) =
       orderBy: { memberNumber: 'asc' },
     });
 
-    const reportData = members.map(member => ({
+    const reportData = members.map((member: any) => ({
       id: member.id,
       memberNumber: member.memberNumber,
       name: `${member.firstName} ${member.lastName}`,
@@ -93,7 +93,7 @@ router.get('/members', authMiddleware, async (req: AuthRequest, res: Response) =
       const headers = ['ID', 'Member Number', 'Name', 'Email', 'Phone', 'Status', 'Active Loans', 'Max Books', 'Member Since'];
       const csvRows = [
         headers.join(','),
-        ...reportData.map(row => [
+        ...reportData.map((row: any) => [
           row.id,
           row.memberNumber,
           `"${row.name}"`,
@@ -146,7 +146,7 @@ router.get('/borrowings', authMiddleware, async (req: AuthRequest, res: Response
       orderBy: { borrowDate: 'desc' },
     });
 
-    const reportData = borrowings.map(b => {
+    const reportData = borrowings.map((b: any) => {
       const isOverdue = b.status === 'ACTIVE' && new Date(b.dueDate) < new Date();
       return {
         id: b.id,
@@ -166,7 +166,7 @@ router.get('/borrowings', authMiddleware, async (req: AuthRequest, res: Response
       const headers = ['ID', 'Member Number', 'Member Name', 'Book Title', 'Author', 'Barcode', 'Borrow Date', 'Due Date', 'Return Date', 'Status'];
       const csvRows = [
         headers.join(','),
-        ...reportData.map(row => [
+        ...reportData.map((row: any) => [
           row.id,
           row.memberNumber,
           `"${row.memberName}"`,
@@ -217,7 +217,7 @@ router.get('/fines', authMiddleware, async (req: AuthRequest, res: Response) => 
       orderBy: { createdAt: 'desc' },
     });
 
-    const reportData = fines.map(f => ({
+    const reportData = fines.map((f: any) => ({
       id: f.id,
       memberNumber: f.borrowing.member.memberNumber,
       memberName: `${f.borrowing.member.firstName} ${f.borrowing.member.lastName}`,
@@ -233,7 +233,7 @@ router.get('/fines', authMiddleware, async (req: AuthRequest, res: Response) => 
       const headers = ['ID', 'Member Number', 'Member Name', 'Book Title', 'Amount', 'Reason', 'Status', 'Created', 'Paid At'];
       const csvRows = [
         headers.join(','),
-        ...reportData.map(row => [
+        ...reportData.map((row: any) => [
           row.id,
           row.memberNumber,
           `"${row.memberName}"`,
@@ -279,7 +279,7 @@ router.get('/overdue', authMiddleware, async (req: AuthRequest, res: Response) =
       orderBy: { dueDate: 'asc' },
     });
 
-    const reportData = overdue.map(b => {
+    const reportData = overdue.map((b: any) => {
       const daysOverdue = Math.ceil((Date.now() - b.dueDate.getTime()) / (1000 * 60 * 60 * 24));
       const estimatedFine = (daysOverdue * 0.5).toFixed(2);
       return {
@@ -301,7 +301,7 @@ router.get('/overdue', authMiddleware, async (req: AuthRequest, res: Response) =
       const headers = ['ID', 'Member Number', 'Member Name', 'Email', 'Phone', 'Book Title', 'Author', 'Barcode', 'Due Date', 'Days Overdue', 'Estimated Fine'];
       const csvRows = [
         headers.join(','),
-        ...reportData.map(row => [
+        ...reportData.map((row: any) => [
           row.id,
           row.memberNumber,
           `"${row.memberName}"`,
@@ -392,7 +392,7 @@ router.get('/summary', authMiddleware, async (req: AuthRequest, res: Response) =
           ? (((paidFines._sum.amount || 0) / totalFines._sum.amount) * 100).toFixed(1) + '%'
           : '0%',
       },
-      categoryDistribution: categoryStats.map(c => ({
+      categoryDistribution: categoryStats.map((c: any) => ({
         category: c.category,
         count: c._count,
       })),
@@ -414,7 +414,7 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
       take: 50,
     });
 
-    const topBookCopyIds = borrowingCounts.map(b => b.bookCopyId);
+    const topBookCopyIds = borrowingCounts.map((b: any) => b.bookCopyId);
     const topBookCopies = await prisma.bookCopy.findMany({
       where: { id: { in: topBookCopyIds } },
       include: { book: { select: { id: true, title: true, author: true, category: true } } },
@@ -422,8 +422,8 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
 
     // Aggregate by book (not copy)
     const bookBorrowCounts: Record<string, { book: any; count: number }> = {};
-    borrowingCounts.forEach(bc => {
-      const copy = topBookCopies.find(c => c.id === bc.bookCopyId);
+    borrowingCounts.forEach((bc: any) => {
+      const copy = topBookCopies.find((c: any) => c.id === bc.bookCopyId);
       if (copy) {
         const bookId = copy.book.id;
         if (!bookBorrowCounts[bookId]) {
@@ -452,14 +452,14 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
       take: 10,
     });
 
-    const topMemberIds = memberBorrowings.map(m => m.memberId);
+    const topMemberIds = memberBorrowings.map((m: any) => m.memberId);
     const topMembers = await prisma.member.findMany({
       where: { id: { in: topMemberIds } },
       select: { id: true, memberNumber: true, firstName: true, lastName: true, status: true },
     });
 
-    const mostActiveMembers = memberBorrowings.map((mb, index) => {
-      const member = topMembers.find(m => m.id === mb.memberId);
+    const mostActiveMembers = memberBorrowings.map((mb: any, index: number) => {
+      const member = topMembers.find((m: any) => m.id === mb.memberId);
       return {
         rank: index + 1,
         memberNumber: member?.memberNumber || 'Unknown',
@@ -479,7 +479,7 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
     });
 
     const categoryPerformance: Record<string, number> = {};
-    categoryBorrowings.forEach(b => {
+    categoryBorrowings.forEach((b: any) => {
       const cat = b.bookCopy.book.category;
       categoryPerformance[cat] = (categoryPerformance[cat] || 0) + 1;
     });
@@ -506,7 +506,7 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
     });
 
     const memberFineAggregates: Record<string, { member: any; amount: number; count: number }> = {};
-    memberFines.forEach(f => {
+    memberFines.forEach((f: any) => {
       const memberId = f.borrowing.memberId;
       if (!memberFineAggregates[memberId]) {
         memberFineAggregates[memberId] = {
@@ -565,7 +565,7 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
     });
 
     const monthlyTrend: Record<string, number> = {};
-    recentBorrowings.forEach(b => {
+    recentBorrowings.forEach((b: any) => {
       const monthKey = b.borrowDate.toISOString().slice(0, 7); // YYYY-MM
       monthlyTrend[monthKey] = (monthlyTrend[monthKey] || 0) + 1;
     });
@@ -586,7 +586,7 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
         returnRate: returnRate.toFixed(1) + '%',
         overdueRate: overdueRate.toFixed(1) + '%',
         avgBorrowingsPerMember: topMembers.length > 0
-          ? (memberBorrowings.reduce((sum, m) => sum + m._count.id, 0) / memberBorrowings.length).toFixed(1)
+          ? (memberBorrowings.reduce((sum: number, m: any) => sum + m._count.id, 0) / memberBorrowings.length).toFixed(1)
           : '0',
       },
     });
