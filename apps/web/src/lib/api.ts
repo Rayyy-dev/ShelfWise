@@ -38,9 +38,9 @@ function handleExpiredToken(): void {
 async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   const { token, skipAuth, ...fetchOptions } = options;
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   if (token) {
@@ -81,7 +81,7 @@ export const auth = {
       body: JSON.stringify({ email, password }),
     }),
   register: (email: string, password: string, name: string) =>
-    fetchApi<{ message: string }>('/api/auth/register', {
+    fetchApi<{ message: string; token?: string }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, name }),
     }),

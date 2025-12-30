@@ -24,7 +24,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     if (category) {
-      where.category = category;
+      where.category = category as string;
     }
 
     const [books, total] = await Promise.all([
@@ -61,8 +61,8 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     res.json({
       books: booksWithAvailability,
       total,
-      page: parseInt(page as string),
-      totalPages: Math.ceil(total / parseInt(limit as string)),
+      page,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
     console.error('Get books error:', error);

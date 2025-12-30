@@ -39,7 +39,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     if (status) {
-      where.status = status;
+      where.status = status as string;
     }
 
     const [members, total] = await Promise.all([

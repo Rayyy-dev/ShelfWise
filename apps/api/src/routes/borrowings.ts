@@ -22,12 +22,12 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         where.status = 'ACTIVE';
         where.dueDate = { lt: new Date() };
       } else {
-        where.status = status;
+        where.status = status as string;
       }
     }
 
     if (memberId) {
-      where.memberId = memberId;
+      where.memberId = memberId as string;
     }
 
     const [borrowings, total] = await Promise.all([

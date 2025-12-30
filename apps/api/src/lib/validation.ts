@@ -86,7 +86,7 @@ export function validate<T>(schema: z.ZodSchema<T>) {
   return (data: unknown): { success: true; data: T } | { success: false; error: string } => {
     const result = schema.safeParse(data);
     if (!result.success) {
-      const firstError = result.error.errors[0];
+      const firstError = result.error.issues[0];
       return { success: false, error: firstError.message };
     }
     return { success: true, data: result.data };

@@ -24,7 +24,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as {
+    const decoded = jwt.verify(token, JWT_SECRET!) as {
       id: string;
       email: string;
       role: string;
@@ -37,5 +37,5 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 }
 
 export function generateToken(user: { id: string; email: string; role: string }) {
-  return jwt.sign(user, JWT_SECRET, { expiresIn: '30m' });
+  return jwt.sign(user, JWT_SECRET!, { expiresIn: '30m' });
 }
