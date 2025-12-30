@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma, Prisma } from '@shelfwise/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/authorize.js';
 
 const router = Router();
 
@@ -330,8 +331,8 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/borrowings/:id - Delete a borrowing record
-router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+// DELETE /api/borrowings/:id - Delete a borrowing record (ADMIN only)
+router.delete('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 

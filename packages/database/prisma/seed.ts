@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -27,37 +26,14 @@ function pastDate(daysAgo: number): Date {
 async function main() {
   console.log('Seeding database with expanded data...');
 
-  // Clear existing data
+  // Clear existing data (except users - preserve existing accounts)
   await prisma.fine.deleteMany({});
   await prisma.borrowing.deleteMany({});
   await prisma.bookCopy.deleteMany({});
   await prisma.book.deleteMany({});
   await prisma.member.deleteMany({});
-  await prisma.user.deleteMany({});
-
-  // Create admin user
-  const adminPassword = await bcrypt.hash('admin123', 10);
-  await prisma.user.create({
-    data: {
-      email: 'admin@library.com',
-      passwordHash: adminPassword,
-      name: 'Admin User',
-      role: 'ADMIN',
-    },
-  });
-  console.log('Created admin user: admin@library.com');
-
-  // Create librarian user
-  const librarianPassword = await bcrypt.hash('librarian123', 10);
-  await prisma.user.create({
-    data: {
-      email: 'librarian@library.com',
-      passwordHash: librarianPassword,
-      name: 'Jane Librarian',
-      role: 'LIBRARIAN',
-    },
-  });
-  console.log('Created librarian user: librarian@library.com');
+  // Note: NOT deleting users - preserving areeha.usman@student.wsb.edu.pl
+  console.log('Preserved existing user accounts');
 
   // Extended book data - 300+ books
   const categories = ['Fiction', 'Science Fiction', 'Fantasy', 'Mystery', 'Romance', 'Thriller', 'Horror', 'Non-Fiction', 'Biography', 'History', 'Science', 'Technology', 'Business', 'Self-Help', 'Psychology', 'Philosophy', 'Poetry', 'Drama', 'Children', 'Young Adult'];

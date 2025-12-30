@@ -1,11 +1,12 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { prisma, Prisma } from '@shelfwise/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/authorize.js';
 
 const router = Router();
 
 // GET /api/books - List all books with search/filter
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { search, category } = req.query;
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
@@ -90,7 +91,7 @@ router.get('/available-copies', authMiddleware, async (req: AuthRequest, res: Re
 });
 
 // GET /api/books/categories - Get unique categories
-router.get('/categories', async (req: Request, res: Response) => {
+router.get('/categories', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const categories = await prisma.book.findMany({
       select: { category: true },
@@ -106,7 +107,7 @@ router.get('/categories', async (req: Request, res: Response) => {
 });
 
 // GET /api/books/:id - Get single book with copies
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -144,8 +145,8 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/books - Create new book
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+// POST /api/books - Create new book (ADMIN only)
+router.post('/', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { isbn, title, author, category, description, publishedYear, coverImage, copies } = req.body;
 
@@ -187,8 +188,8 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PUT /api/books/:id - Update book
-router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+// PUT /api/books/:id - Update book (ADMIN only)
+router.put('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { isbn, title, author, category, description, publishedYear, coverImage } = req.body;
@@ -219,8 +220,8 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/books/:id - Delete book
-router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+// DELETE /api/books/:id - Delete book (ADMIN only)
+router.delete('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -247,8 +248,8 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
   }
 });
 
-// POST /api/books/:id/copies - Add copy to book
-router.post('/:id/copies', authMiddleware, async (req: AuthRequest, res: Response) => {
+// POST /api/books/:id/copies - Add copy to book (ADMIN only)
+router.post('/:id/copies', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { barcode, condition, shelfLocation } = req.body;
@@ -277,8 +278,8 @@ router.post('/:id/copies', authMiddleware, async (req: AuthRequest, res: Respons
   }
 });
 
-// PUT /api/books/copies/:copyId - Update copy
-router.put('/copies/:copyId', authMiddleware, async (req: AuthRequest, res: Response) => {
+// PUT /api/books/copies/:copyId - Update copy (ADMIN only)
+router.put('/copies/:copyId', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { copyId } = req.params;
     const { barcode, status, condition, shelfLocation } = req.body;

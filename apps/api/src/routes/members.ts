@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma, Prisma } from '@shelfwise/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/authorize.js';
 
 const router = Router();
 
@@ -113,8 +114,8 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/members - Create new member
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+// POST /api/members - Create new member (ADMIN only)
+router.post('/', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { firstName, lastName, email, phone, address, maxBooks } = req.body;
 
@@ -146,8 +147,8 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PUT /api/members/:id - Update member
-router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+// PUT /api/members/:id - Update member (ADMIN only)
+router.put('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { firstName, lastName, email, phone, address, status, maxBooks } = req.body;
@@ -178,8 +179,8 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/members/:id - Delete member (only if no active loans)
-router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+// DELETE /api/members/:id - Delete member (ADMIN only, only if no active loans)
+router.delete('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 

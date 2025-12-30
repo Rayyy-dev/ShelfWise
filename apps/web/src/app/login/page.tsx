@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { BookOpen, Mail, Lock, ArrowRight } from 'lucide-react';
 import { auth } from '@/lib/api';
 import { Button } from '@/components/ui';
@@ -12,20 +13,28 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setNeedsVerification(false);
     setLoading(true);
 
     try {
-      const { token, user } = await auth.login(email, password);
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      const result = await auth.login(email, password);
+      localStorage.setItem('token', result.token);
+      localStorage.setItem('user', JSON.stringify(result.user));
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      const message = err.message || 'Login failed';
+      if (message.includes('verify your email')) {
+        setNeedsVerification(true);
+        setUnverifiedEmail(email);
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -55,6 +64,14 @@ export default function LoginPage() {
             {error && (
               <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                 {error}
+                {needsVerification && (
+                  <Link
+                    href={`/verify?email=${encodeURIComponent(unverifiedEmail)}`}
+                    className="block mt-2 text-indigo-600 hover:text-indigo-700 font-medium"
+                  >
+                    Verify your email now
+                  </Link>
+                )}
               </div>
             )}
 
@@ -86,9 +103,9 @@ export default function LoginPage() {
                 />
                 <span className="text-sm text-slate-600">Remember me</span>
               </label>
-              <button type="button" className="text-sm text-indigo-600 hover:text-indigo-700">
+              <Link href="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-700">
                 Forgot password?
-              </button>
+              </Link>
             </div>
 
             <Button
@@ -105,6 +122,12 @@ export default function LoginPage() {
             </Button>
           </form>
 
+          <div className="mt-4 text-center">
+            <span className="text-sm text-slate-500">Don't have an account? </span>
+            <Link href="/register" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+              Sign up
+            </Link>
+          </div>
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-400">

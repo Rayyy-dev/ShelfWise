@@ -3,18 +3,24 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./library.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         String   @default("LIBRARIAN") // ADMIN, LIBRARIAN
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String
+  name              String
+  role              String    @default("LIBRARIAN") // ADMIN, LIBRARIAN
+  isVerified        Boolean   @default(false)
+  verificationCode  String?
+  verificationExp   DateTime?
+  verificationTries Int       @default(0)
+  resetToken        String?
+  resetTokenExp     DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model Book {
@@ -29,6 +35,9 @@ model Book {
   copies        BookCopy[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+
+  @@index([category])
+  @@index([author])
 }
 
 model BookCopy {
@@ -42,6 +51,8 @@ model BookCopy {
   borrowings    Borrowing[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  @@index([status])
 }
 
 model Member {
@@ -57,6 +68,8 @@ model Member {
   borrowings   Borrowing[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+
+  @@index([status])
 }
 
 model Borrowing {
@@ -72,6 +85,9 @@ model Borrowing {
   fines      Fine[]
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+
+  @@index([status])
+  @@index([dueDate])
 }
 
 model Fine {
@@ -84,4 +100,6 @@ model Fine {
   paidAt      DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([status])
 }

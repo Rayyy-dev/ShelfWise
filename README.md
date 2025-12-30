@@ -14,8 +14,8 @@ A modern, full-stack library management system built with Next.js, Express, and 
 
 - **Frontend**: Next.js 14, React 18, Tailwind CSS
 - **Backend**: Express.js, Node.js
-- **Database**: SQLite with Prisma ORM
-- **Authentication**: JWT-based admin authentication
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: JWT-based authentication with role-based access control
 
 ## Project Structure
 
@@ -67,11 +67,6 @@ npm run dev:web
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-### Demo Credentials
-
-- **Email**: admin@library.com
-- **Password**: admin123
-
 ## Available Scripts
 
 | Command | Description |
@@ -85,18 +80,18 @@ npm run dev:web
 
 ## Environment Variables
 
-Create `.env` file in `packages/database/`:
+Copy `.env.example` to set up your environment:
 
-```env
-DATABASE_URL="file:./dev.db"
+```bash
+cp .env.example .env.local
 ```
 
-Create `.env` file in `apps/api/`:
-
-```env
-JWT_SECRET="your-secret-key"
-PORT=3001
-```
+Required variables:
+- `DATABASE_URL` - PostgreSQL connection string
+- `JWT_SECRET` - Secret key for JWT tokens
+- `PORT` - API server port (default: 3001)
+- `FRONTEND_URL` - Frontend URL for CORS (default: http://localhost:3000)
+- `NEXT_PUBLIC_API_URL` - API URL for frontend (default: http://localhost:3001)
 
 ## Pushing to GitHub
 

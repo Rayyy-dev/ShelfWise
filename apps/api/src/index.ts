@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -325,6 +326,36 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login attempts, please try again later' },
 });
 
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many registration attempts, please try again later' },
+});
+
+const verifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many verification attempts, please try again later' },
+});
+
+const resendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: 'Too many resend attempts, please try again later' },
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: 'Too many password reset attempts, please try again later' },
+});
+
+const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many password reset attempts, please try again later' },
+});
+
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -333,6 +364,11 @@ app.use(cors({
 app.use(express.json());
 app.use('/api/', limiter);
 app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', registerLimiter);
+app.use('/api/auth/verify', verifyLimiter);
+app.use('/api/auth/resend-code', resendLimiter);
+app.use('/api/auth/forgot-password', forgotPasswordLimiter);
+app.use('/api/auth/reset-password', resetPasswordLimiter);
 
 // Swagger UI
 app.use('/', swaggerUi.serve);
@@ -356,9 +392,29 @@ app.use('/api/fines', finesRoutes);
 app.use('/api/reports', reportsRoutes);
 
 // Error handler
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+app.use((err: Error & { statusCode?: number; isOperational?: boolean }, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Log error with context
+  const errorLog = {
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    path: req.path,
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+  };
+  console.error(JSON.stringify(errorLog, null, 2));
+
+  // Determine status code
+  const statusCode = err.statusCode || 500;
+
+  // Don't leak internal error details in production
+  const message = err.isOperational !== false
+    ? err.message
+    : 'An unexpected error occurred';
+
+  res.status(statusCode).json({
+    error: message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  });
 });
 
 app.listen(PORT, () => {

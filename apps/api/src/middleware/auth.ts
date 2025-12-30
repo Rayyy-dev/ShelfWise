@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'shelfwise-dev-secret-2024';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 
 export interface AuthRequest extends Request {
   user?: {
@@ -34,5 +37,5 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 }
 
 export function generateToken(user: { id: string; email: string; role: string }) {
-  return jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(user, JWT_SECRET, { expiresIn: '30m' });
 }

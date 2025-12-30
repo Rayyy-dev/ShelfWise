@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma, Prisma } from '@shelfwise/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/authorize.js';
 
 const router = Router();
 
@@ -94,8 +95,8 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res: Response) => 
   }
 });
 
-// POST /api/fines/calculate - Calculate fines for overdue books
-router.post('/calculate', authMiddleware, async (req: AuthRequest, res: Response) => {
+// POST /api/fines/calculate - Calculate fines for overdue books (ADMIN only)
+router.post('/calculate', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     // Find all active overdue borrowings without fines
     const overdueBorrowings = await prisma.borrowing.findMany({
@@ -151,8 +152,8 @@ router.post('/calculate', authMiddleware, async (req: AuthRequest, res: Response
   }
 });
 
-// POST /api/fines - Create a manual fine
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+// POST /api/fines - Create a manual fine (ADMIN only)
+router.post('/', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { borrowingId, amount, reason } = req.body;
 
@@ -224,8 +225,8 @@ router.put('/:id/pay', authMiddleware, async (req: AuthRequest, res: Response) =
   }
 });
 
-// PUT /api/fines/:id/waive - Waive a fine
-router.put('/:id/waive', authMiddleware, async (req: AuthRequest, res: Response) => {
+// PUT /api/fines/:id/waive - Waive a fine (ADMIN only)
+router.put('/:id/waive', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -285,8 +286,8 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/fines/:id - Delete a fine
-router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+// DELETE /api/fines/:id - Delete a fine (ADMIN only)
+router.delete('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 

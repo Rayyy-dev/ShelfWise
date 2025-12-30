@@ -2,10 +2,41 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface FetchOptions extends RequestInit {
   token?: string;
+  skipAuth?: boolean;
+}
+
+// Decode JWT payload without verification (for expiry check only)
+function decodeToken(token: string): { exp?: number } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1]));
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+// Check if token is expired (with 1 minute buffer)
+function isTokenExpired(token: string): boolean {
+  const payload = decodeToken(token);
+  if (!payload?.exp) return true;
+  const expiryTime = payload.exp * 1000; // Convert to milliseconds
+  const bufferTime = 60 * 1000; // 1 minute buffer
+  return Date.now() > expiryTime - bufferTime;
+}
+
+// Clear auth data and redirect to login
+function handleExpiredToken(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  }
 }
 
 async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
-  const { token, ...fetchOptions } = options;
+  const { token, skipAuth, ...fetchOptions } = options;
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -13,10 +44,18 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
   };
 
   if (token) {
+    if (isTokenExpired(token)) {
+      handleExpiredToken();
+      throw new Error('Session expired. Please log in again.');
+    }
     headers['Authorization'] = `Bearer ${token}`;
-  } else if (typeof window !== 'undefined') {
+  } else if (typeof window !== 'undefined' && !skipAuth) {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
+      if (isTokenExpired(storedToken)) {
+        handleExpiredToken();
+        throw new Error('Session expired. Please log in again.');
+      }
       headers['Authorization'] = `Bearer ${storedToken}`;
     }
   }
@@ -37,9 +76,24 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
 // Auth
 export const auth = {
   login: (email: string, password: string) =>
-    fetchApi<{ token: string; user: any }>('/api/auth/login', {
+    fetchApi<{ token: string; user: any; needsVerification?: boolean; email?: string }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    }),
+  register: (email: string, password: string, name: string) =>
+    fetchApi<{ message: string }>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name }),
+    }),
+  forgotPassword: (email: string) =>
+    fetchApi<{ message: string }>('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (email: string, token: string, password: string) =>
+    fetchApi<{ message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, token, password }),
     }),
   me: () => fetchApi<any>('/api/auth/me'),
   updateProfile: (data: { name?: string; email?: string }) =>
