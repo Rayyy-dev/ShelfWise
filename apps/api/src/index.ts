@@ -362,20 +362,20 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
-app.use('/api/', limiter);
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', registerLimiter);
-app.use('/api/auth/verify', verifyLimiter);
-app.use('/api/auth/resend-code', resendLimiter);
-app.use('/api/auth/forgot-password', forgotPasswordLimiter);
-app.use('/api/auth/reset-password', resetPasswordLimiter);
+app.use('/api/', limiter as any);
+app.use('/api/auth/login', authLimiter as any);
+app.use('/api/auth/register', registerLimiter as any);
+app.use('/api/auth/verify', verifyLimiter as any);
+app.use('/api/auth/resend-code', resendLimiter as any);
+app.use('/api/auth/forgot-password', forgotPasswordLimiter as any);
+app.use('/api/auth/reset-password', resetPasswordLimiter as any);
 
 // Swagger UI
-app.use('/', swaggerUi.serve);
+app.use('/', swaggerUi.serve as any);
 app.get('/', swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'ShelfWise API Docs',
-}));
+}) as any);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
+import { ParamsDictionary } from 'express-serve-static-core';
+import { ParsedQs } from 'qs';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -6,7 +8,12 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
 }
 
-export interface AuthRequest extends Request {
+export interface AuthRequest<
+  P = ParamsDictionary,
+  ResBody = any,
+  ReqBody = any,
+  ReqQuery = ParsedQs
+> extends Request<P, ResBody, ReqBody, ReqQuery> {
   user?: {
     id: string;
     email: string;
