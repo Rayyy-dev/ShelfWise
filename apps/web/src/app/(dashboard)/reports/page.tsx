@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileText, Download, BookOpen, Users, ArrowLeftRight, DollarSign, AlertTriangle, TrendingUp, Lightbulb} from 'lucide-react';
+import { Download, BookOpen, Users, ArrowLeftRight, DollarSign, AlertTriangle, FileSpreadsheet, FileText } from 'lucide-react';
 import { reports } from '@/lib/api';
 import { Card, Button } from '@/components/ui';
 
@@ -40,7 +40,6 @@ interface Insights {
   topCategories: { rank: number; category: string; borrowCount: number }[];
   membersWithHighestFines: { rank: number; memberNumber: string; name: string; pendingFines: number; totalOwed: number }[];
   borrowingTrend: { month: string; borrowings: number }[];
-  recommendations: string[];
   keyMetrics: {
     returnRate: string;
     overdueRate: string;
@@ -82,26 +81,26 @@ export default function ReportsPage() {
     }
   }
 
-  async function downloadReport(reportType: string) {
+  async function downloadReport(reportType: string, format: 'csv' | 'pdf') {
     try {
-      setDownloading(reportType);
+      setDownloading(`${reportType}-${format}`);
       let blob: Blob;
 
       switch (reportType) {
         case 'books':
-          blob = await reports.books('csv') as Blob;
+          blob = await reports.books(format) as Blob;
           break;
         case 'members':
-          blob = await reports.members('csv') as Blob;
+          blob = await reports.members(format) as Blob;
           break;
         case 'borrowings':
-          blob = await reports.borrowings({ format: 'csv' }) as Blob;
+          blob = await reports.borrowings({ format }) as Blob;
           break;
         case 'overdue':
-          blob = await reports.overdue('csv') as Blob;
+          blob = await reports.overdue(format) as Blob;
           break;
         case 'fines':
-          blob = await reports.fines({ format: 'csv' }) as Blob;
+          blob = await reports.fines({ format }) as Blob;
           break;
         default:
           return;
@@ -110,7 +109,7 @@ export default function ReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${reportType}_report_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `${reportType}_report_${new Date().toISOString().split('T')[0]}.${format}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -194,21 +193,6 @@ export default function ReportsPage() {
         </Card>
       )}
 
-      {/* Recommendations */}
-      {insights && insights.recommendations.length > 0 && (
-        <Card>
-          <h2 className="font-semibold text-slate-900 mb-3">Recommendations</h2>
-          <ul className="space-y-2">
-            {insights.recommendations.map((rec, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-slate-600">
-                <span className="text-slate-400 mt-0.5">•</span>
-                {rec}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
       {/* Top Lists */}
       {insights && (
         <div className="grid gap-6 lg:grid-cols-2">
@@ -282,7 +266,7 @@ export default function ReportsPage() {
       {/* Export Reports */}
       <Card>
         <h2 className="font-semibold text-slate-900 mb-4">Export Reports</h2>
-        <p className="text-sm text-slate-500 mb-4">Download reports as CSV files</p>
+        <p className="text-sm text-slate-500 mb-4">Download reports as CSV or PDF</p>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {reportTypes.map((report) => {
@@ -294,24 +278,43 @@ export default function ReportsPage() {
               >
                 <div className="flex items-center justify-between mb-3">
                   <Icon className="h-5 w-5 text-slate-400" />
+                </div>
+                <h3 className="text-sm font-medium text-slate-900">{report.name}</h3>
+                <p className="text-sm text-slate-500 mt-1 mb-3">{report.description}</p>
+                <div className="flex gap-2">
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => downloadReport(report.id)}
-                    disabled={downloading === report.id}
+                    onClick={() => downloadReport(report.id, 'csv')}
+                    disabled={downloading === `${report.id}-csv`}
+                    className="flex-1"
                   >
-                    {downloading === report.id ? (
+                    {downloading === `${report.id}-csv` ? (
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-slate-600"></div>
                     ) : (
                       <>
-                        <Download className="h-4 w-4 mr-1" />
+                        <FileSpreadsheet className="h-4 w-4 mr-1" />
                         CSV
                       </>
                     )}
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => downloadReport(report.id, 'pdf')}
+                    disabled={downloading === `${report.id}-pdf`}
+                    className="flex-1"
+                  >
+                    {downloading === `${report.id}-pdf` ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-slate-600"></div>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 mr-1" />
+                        PDF
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <h3 className="text-sm font-medium text-slate-900">{report.name}</h3>
-                <p className="text-sm text-slate-500 mt-1">{report.description}</p>
               </div>
             );
           })}

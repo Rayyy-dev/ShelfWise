@@ -189,53 +189,53 @@ export const fines = {
 
 // Reports
 export const reports = {
-  books: (format?: 'json' | 'csv') => {
-    const url = `/api/reports/books${format === 'csv' ? '?format=csv' : ''}`;
-    if (format === 'csv') {
+  books: (format?: 'json' | 'csv' | 'pdf') => {
+    const url = `/api/reports/books${format && format !== 'json' ? `?format=${format}` : ''}`;
+    if (format === 'csv' || format === 'pdf') {
       return fetch(`${API_URL}${url}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       }).then(res => res.blob());
     }
     return fetchApi<any>(url);
   },
-  members: (format?: 'json' | 'csv') => {
-    const url = `/api/reports/members${format === 'csv' ? '?format=csv' : ''}`;
-    if (format === 'csv') {
+  members: (format?: 'json' | 'csv' | 'pdf') => {
+    const url = `/api/reports/members${format && format !== 'json' ? `?format=${format}` : ''}`;
+    if (format === 'csv' || format === 'pdf') {
       return fetch(`${API_URL}${url}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       }).then(res => res.blob());
     }
     return fetchApi<any>(url);
   },
-  borrowings: (params?: { format?: 'json' | 'csv'; status?: string; startDate?: string; endDate?: string }) => {
+  borrowings: (params?: { format?: 'json' | 'csv' | 'pdf'; status?: string; startDate?: string; endDate?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.format) searchParams.set('format', params.format);
     if (params?.status) searchParams.set('status', params.status);
     if (params?.startDate) searchParams.set('startDate', params.startDate);
     if (params?.endDate) searchParams.set('endDate', params.endDate);
     const url = `/api/reports/borrowings?${searchParams}`;
-    if (params?.format === 'csv') {
+    if (params?.format === 'csv' || params?.format === 'pdf') {
       return fetch(`${API_URL}${url}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       }).then(res => res.blob());
     }
     return fetchApi<any>(url);
   },
-  fines: (params?: { format?: 'json' | 'csv'; status?: string }) => {
+  fines: (params?: { format?: 'json' | 'csv' | 'pdf'; status?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.format) searchParams.set('format', params.format);
     if (params?.status) searchParams.set('status', params.status);
     const url = `/api/reports/fines?${searchParams}`;
-    if (params?.format === 'csv') {
+    if (params?.format === 'csv' || params?.format === 'pdf') {
       return fetch(`${API_URL}${url}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       }).then(res => res.blob());
     }
     return fetchApi<any>(url);
   },
-  overdue: (format?: 'json' | 'csv') => {
-    const url = `/api/reports/overdue${format === 'csv' ? '?format=csv' : ''}`;
-    if (format === 'csv') {
+  overdue: (format?: 'json' | 'csv' | 'pdf') => {
+    const url = `/api/reports/overdue${format && format !== 'json' ? `?format=${format}` : ''}`;
+    if (format === 'csv' || format === 'pdf') {
       return fetch(`${API_URL}${url}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       }).then(res => res.blob());

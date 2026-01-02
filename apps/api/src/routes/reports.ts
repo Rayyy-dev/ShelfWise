@@ -1,6 +1,43 @@
 import { Router, Response } from 'express';
 import { prisma } from '@shelfwise/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import PDFDocument from 'pdfkit';
+
+// Helper to generate PDF table
+function generatePdfTable(doc: PDFKit.PDFDocument, title: string, headers: string[], rows: string[][]) {
+  const pageWidth = doc.page.width - 100;
+  const colWidth = pageWidth / headers.length;
+  const startX = 50;
+  let y = doc.y;
+
+  // Title
+  doc.fontSize(18).font('Helvetica-Bold').text(title, startX, 50);
+  doc.fontSize(10).font('Helvetica').text(`Generated: ${new Date().toLocaleDateString()}`, startX, 75);
+  y = 110;
+
+  // Headers
+  doc.fontSize(9).font('Helvetica-Bold');
+  headers.forEach((header, i) => {
+    doc.text(header, startX + (i * colWidth), y, { width: colWidth - 5, align: 'left' });
+  });
+  y += 20;
+  doc.moveTo(startX, y).lineTo(startX + pageWidth, y).stroke();
+  y += 10;
+
+  // Rows
+  doc.font('Helvetica').fontSize(8);
+  rows.forEach((row) => {
+    if (y > doc.page.height - 80) {
+      doc.addPage();
+      y = 50;
+    }
+    const rowHeight = 15;
+    row.forEach((cell, i) => {
+      doc.text(String(cell || ''), startX + (i * colWidth), y, { width: colWidth - 5, align: 'left' });
+    });
+    y += rowHeight;
+  });
+}
 
 const router = Router();
 
@@ -32,12 +69,12 @@ router.get('/books', authMiddleware, async (req: AuthRequest, res: Response) => 
       borrowedCopies: book.copies.filter((c: any) => c.status === 'BORROWED').length,
     }));
 
+    const headers = ['ISBN', 'Title', 'Author', 'Category', 'Year', 'Total', 'Available', 'Borrowed'];
+
     if (format === 'csv') {
-      const headers = ['ID', 'ISBN', 'Title', 'Author', 'Category', 'Published Year', 'Total Copies', 'Available', 'Borrowed'];
       const csvRows = [
         headers.join(','),
         ...reportData.map((row: any) => [
-          row.id,
           `"${row.isbn}"`,
           `"${row.title.replace(/"/g, '""')}"`,
           `"${row.author.replace(/"/g, '""')}"`,
@@ -52,6 +89,21 @@ router.get('/books', authMiddleware, async (req: AuthRequest, res: Response) => 
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=books_report.csv');
       return res.send(csvRows.join('\n'));
+    }
+
+    if (format === 'pdf') {
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=books_report.pdf');
+      doc.pipe(res);
+
+      const rows = reportData.map((row: any) => [
+        row.isbn, row.title, row.author, row.category,
+        String(row.publishedYear), String(row.totalCopies), String(row.availableCopies), String(row.borrowedCopies)
+      ]);
+      generatePdfTable(doc, 'Books Inventory Report', headers, rows);
+      doc.end();
+      return;
     }
 
     res.json({
@@ -93,12 +145,12 @@ router.get('/members', authMiddleware, async (req: AuthRequest, res: Response) =
       memberSince: member.createdAt.toISOString().split('T')[0],
     }));
 
+    const headers = ['Member #', 'Name', 'Email', 'Phone', 'Status', 'Active Loans', 'Max Books', 'Since'];
+
     if (format === 'csv') {
-      const headers = ['ID', 'Member Number', 'Name', 'Email', 'Phone', 'Status', 'Active Loans', 'Max Books', 'Member Since'];
       const csvRows = [
         headers.join(','),
         ...reportData.map((row: any) => [
-          row.id,
           row.memberNumber,
           `"${row.name}"`,
           row.email,
@@ -113,6 +165,21 @@ router.get('/members', authMiddleware, async (req: AuthRequest, res: Response) =
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=members_report.csv');
       return res.send(csvRows.join('\n'));
+    }
+
+    if (format === 'pdf') {
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=members_report.pdf');
+      doc.pipe(res);
+
+      const rows = reportData.map((row: any) => [
+        row.memberNumber, row.name, row.email, row.phone,
+        row.status, String(row.activeLoans), String(row.maxBooks), row.memberSince
+      ]);
+      generatePdfTable(doc, 'Members Directory Report', headers, rows);
+      doc.end();
+      return;
     }
 
     res.json({
@@ -169,12 +236,12 @@ router.get('/borrowings', authMiddleware, async (req: AuthRequest, res: Response
       };
     });
 
+    const headers = ['Member #', 'Member', 'Book', 'Author', 'Barcode', 'Borrowed', 'Due', 'Returned', 'Status'];
+
     if (format === 'csv') {
-      const headers = ['ID', 'Member Number', 'Member Name', 'Book Title', 'Author', 'Barcode', 'Borrow Date', 'Due Date', 'Return Date', 'Status'];
       const csvRows = [
         headers.join(','),
         ...reportData.map((row: any) => [
-          row.id,
           row.memberNumber,
           `"${row.memberName}"`,
           `"${row.bookTitle.replace(/"/g, '""')}"`,
@@ -190,6 +257,21 @@ router.get('/borrowings', authMiddleware, async (req: AuthRequest, res: Response
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=borrowings_report.csv');
       return res.send(csvRows.join('\n'));
+    }
+
+    if (format === 'pdf') {
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=borrowings_report.pdf');
+      doc.pipe(res);
+
+      const rows = reportData.map((row: any) => [
+        row.memberNumber, row.memberName, row.bookTitle, row.bookAuthor,
+        row.barcode, row.borrowDate, row.dueDate, row.returnDate, row.status
+      ]);
+      generatePdfTable(doc, 'Borrowing History Report', headers, rows);
+      doc.end();
+      return;
     }
 
     res.json({
@@ -239,12 +321,12 @@ router.get('/fines', authMiddleware, async (req: AuthRequest, res: Response) => 
       paidAt: f.paidAt ? f.paidAt.toISOString().split('T')[0] : 'N/A',
     }));
 
+    const headers = ['Member #', 'Member', 'Book', 'Amount', 'Reason', 'Status', 'Created', 'Paid At'];
+
     if (format === 'csv') {
-      const headers = ['ID', 'Member Number', 'Member Name', 'Book Title', 'Amount', 'Reason', 'Status', 'Created', 'Paid At'];
       const csvRows = [
         headers.join(','),
         ...reportData.map((row: any) => [
-          row.id,
           row.memberNumber,
           `"${row.memberName}"`,
           `"${row.bookTitle.replace(/"/g, '""')}"`,
@@ -259,6 +341,21 @@ router.get('/fines', authMiddleware, async (req: AuthRequest, res: Response) => 
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=fines_report.csv');
       return res.send(csvRows.join('\n'));
+    }
+
+    if (format === 'pdf') {
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=fines_report.pdf');
+      doc.pipe(res);
+
+      const rows = reportData.map((row: any) => [
+        row.memberNumber, row.memberName, row.bookTitle, `$${row.amount}`,
+        row.reason, row.status, row.createdAt, row.paidAt
+      ]);
+      generatePdfTable(doc, 'Fines Report', headers, rows);
+      doc.end();
+      return;
     }
 
     res.json({
@@ -309,18 +406,17 @@ router.get('/overdue', authMiddleware, async (req: AuthRequest, res: Response) =
       };
     });
 
+    const headers = ['Member #', 'Member', 'Email', 'Phone', 'Book', 'Barcode', 'Due Date', 'Days', 'Est. Fine'];
+
     if (format === 'csv') {
-      const headers = ['ID', 'Member Number', 'Member Name', 'Email', 'Phone', 'Book Title', 'Author', 'Barcode', 'Due Date', 'Days Overdue', 'Estimated Fine'];
       const csvRows = [
         headers.join(','),
         ...reportData.map((row: any) => [
-          row.id,
           row.memberNumber,
           `"${row.memberName}"`,
           row.memberEmail,
           row.memberPhone,
           `"${row.bookTitle.replace(/"/g, '""')}"`,
-          `"${row.bookAuthor.replace(/"/g, '""')}"`,
           row.barcode,
           row.dueDate,
           row.daysOverdue,
@@ -331,6 +427,21 @@ router.get('/overdue', authMiddleware, async (req: AuthRequest, res: Response) =
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=overdue_report.csv');
       return res.send(csvRows.join('\n'));
+    }
+
+    if (format === 'pdf') {
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=overdue_report.pdf');
+      doc.pipe(res);
+
+      const rows = reportData.map((row: any) => [
+        row.memberNumber, row.memberName, row.memberEmail, row.memberPhone,
+        row.bookTitle, row.barcode, row.dueDate, String(row.daysOverdue), `$${row.estimatedFine}`
+      ]);
+      generatePdfTable(doc, 'Overdue Books Report', headers, rows);
+      doc.end();
+      return;
     }
 
     res.json({
