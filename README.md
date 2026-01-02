@@ -57,20 +57,6 @@ npm run dev:web    # localhost:3000
 
 ---
 
-## Environment Variables
-
-Create `.env`:
-
-```env
-DATABASE_URL=postgresql://...
-JWT_SECRET=your-secret
-PORT=3001
-FRONTEND_URL=http://localhost:3000
-NEXT_PUBLIC_API_URL=http://localhost:3001
-```
-
----
-
 ## Scripts
 
 | Command | Description |
