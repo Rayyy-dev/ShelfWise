@@ -156,6 +156,8 @@ router.post('/seed-demo', authMiddleware, async (req: AuthRequest, res: Response
     ];
 
     // Create books with copies (associated with current user)
+    // Use short userId suffix for unique barcodes per user
+    const userSuffix = userId.slice(-6);
     const createdBooks = [];
     for (const bookData of booksData) {
       const book = await prisma.book.create({
@@ -164,8 +166,8 @@ router.post('/seed-demo', authMiddleware, async (req: AuthRequest, res: Response
           userId, // Associate with current user
           copies: {
             create: [
-              { barcode: `${bookData.isbn}-001`, condition: 'GOOD', shelfLocation: 'A1', status: 'AVAILABLE' },
-              { barcode: `${bookData.isbn}-002`, condition: 'GOOD', shelfLocation: 'A1', status: 'AVAILABLE' },
+              { barcode: `${bookData.isbn}-${userSuffix}-001`, condition: 'GOOD', shelfLocation: 'A1', status: 'AVAILABLE' },
+              { barcode: `${bookData.isbn}-${userSuffix}-002`, condition: 'GOOD', shelfLocation: 'A1', status: 'AVAILABLE' },
             ],
           },
         },
