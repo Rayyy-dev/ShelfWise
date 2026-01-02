@@ -34,10 +34,10 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     if (search) {
       where.OR = [
-        { firstName: { contains: search as string }, userId: req.user!.id },
-        { lastName: { contains: search as string }, userId: req.user!.id },
-        { email: { contains: search as string }, userId: req.user!.id },
-        { memberNumber: { contains: search as string }, userId: req.user!.id },
+        { firstName: { contains: search as string, mode: 'insensitive' }, userId: req.user!.id },
+        { lastName: { contains: search as string, mode: 'insensitive' }, userId: req.user!.id },
+        { email: { contains: search as string, mode: 'insensitive' }, userId: req.user!.id },
+        { memberNumber: { contains: search as string, mode: 'insensitive' }, userId: req.user!.id },
       ];
     }
 

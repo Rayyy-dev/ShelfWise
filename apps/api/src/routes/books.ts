@@ -19,9 +19,9 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     if (search) {
       where.OR = [
-        { title: { contains: search as string }, userId: req.user!.id },
-        { author: { contains: search as string }, userId: req.user!.id },
-        { isbn: { contains: search as string }, userId: req.user!.id },
+        { title: { contains: search as string, mode: 'insensitive' }, userId: req.user!.id },
+        { author: { contains: search as string, mode: 'insensitive' }, userId: req.user!.id },
+        { isbn: { contains: search as string, mode: 'insensitive' }, userId: req.user!.id },
       ];
     }
 

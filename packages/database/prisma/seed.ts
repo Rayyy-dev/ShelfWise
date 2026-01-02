@@ -24,23 +24,35 @@ function pastDate(daysAgo: number): Date {
 }
 
 async function main() {
-  console.log('Seeding database with expanded data...');
+  console.log('Seeding database with expanded data for areeha.usman...');
 
-  // Clear existing data (except users - preserve existing accounts)
-  await prisma.fine.deleteMany({});
-  await prisma.borrowing.deleteMany({});
-  await prisma.bookCopy.deleteMany({});
-  await prisma.book.deleteMany({});
-  await prisma.member.deleteMany({});
-  // Note: NOT deleting users - preserving areeha.usman@student.wsb.edu.pl
-  console.log('Preserved existing user accounts');
-
-  // Promote user to ADMIN
-  await prisma.user.updateMany({
+  // Find the target user
+  const targetUser = await prisma.user.findUnique({
     where: { email: 'areeha.usman@student.wsb.edu.pl' },
+  });
+
+  if (!targetUser) {
+    console.error('User areeha.usman@student.wsb.edu.pl not found!');
+    process.exit(1);
+  }
+
+  const userId = targetUser.id;
+  console.log(`Found user: ${targetUser.email} (ID: ${userId})`);
+
+  // Clear existing data for THIS USER ONLY
+  await prisma.fine.deleteMany({ where: { borrowing: { member: { userId } } } });
+  await prisma.borrowing.deleteMany({ where: { member: { userId } } });
+  await prisma.bookCopy.deleteMany({ where: { book: { userId } } });
+  await prisma.book.deleteMany({ where: { userId } });
+  await prisma.member.deleteMany({ where: { userId } });
+  console.log('Cleared existing data for this user');
+
+  // Ensure user is ADMIN
+  await prisma.user.update({
+    where: { id: userId },
     data: { role: 'ADMIN' },
   });
-  console.log('Updated areeha.usman@student.wsb.edu.pl to ADMIN role');
+  console.log('Confirmed ADMIN role');
 
   // Extended book data - 300+ books
   const categories = ['Fiction', 'Science Fiction', 'Fantasy', 'Mystery', 'Romance', 'Thriller', 'Horror', 'Non-Fiction', 'Biography', 'History', 'Science', 'Technology', 'Business', 'Self-Help', 'Psychology', 'Philosophy', 'Poetry', 'Drama', 'Children', 'Young Adult'];
@@ -443,6 +455,7 @@ async function main() {
         isbn: bookData.isbn || null,
         description: `A compelling ${bookData.category.toLowerCase()} book by ${bookData.author}.`,
         publishedYear: 1990 + Math.floor(Math.random() * 34),
+        userId, // Associate with target user
         copies: {
           create: Array.from({ length: numCopies }, () => ({
             barcode: `BC-${String(copyCounter++).padStart(4, '0')}`,
@@ -477,14 +490,18 @@ async function main() {
         status: Math.random() > 0.1 ? 'ACTIVE' : (Math.random() > 0.5 ? 'SUSPENDED' : 'EXPIRED'),
         maxBooks: [3, 5, 5, 5, 7, 10][Math.floor(Math.random() * 6)],
         createdAt: randomPastDate(365),
+        userId, // Associate with target user
       },
     });
     createdMembers.push(member);
   }
   console.log(`Created ${createdMembers.length} members`);
 
-  // Get all available copies for borrowing
-  const allCopies = await prisma.bookCopy.findMany({ include: { book: true } });
+  // Get all available copies for borrowing (only from this user's books)
+  const allCopies = await prisma.bookCopy.findMany({
+    where: { book: { userId } },
+    include: { book: true }
+  });
   const activeMembers = createdMembers.filter(m => m.status === 'ACTIVE');
 
   // Create 150+ borrowings (mix of active, returned, overdue)

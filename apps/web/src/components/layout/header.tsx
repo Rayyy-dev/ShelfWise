@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { User, Bell, AlertTriangle, BookOpen } from 'lucide-react';
+import { User, Bell, AlertTriangle, Menu } from 'lucide-react';
 import { borrowings } from '@/lib/api';
 
 interface OverdueItem {
@@ -12,7 +12,12 @@ interface OverdueItem {
   bookCopy: { book: { title: string } };
 }
 
-export function Header() {
+interface HeaderProps {
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
+}
+
+export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
   const [notifications, setNotifications] = useState<OverdueItem[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -47,12 +52,14 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between px-6 bg-white border-b border-slate-200">
-      {/* Logo/Title */}
+      {/* Left section - Mobile menu toggle */}
       <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-          <BookOpen className="h-4 w-4 text-white" />
-        </div>
-        <span className="text-lg font-semibold text-slate-900 hidden sm:block">ShelfWise</span>
+        <button
+          onClick={onToggleSidebar}
+          className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 lg:hidden"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Right section */}
@@ -130,7 +137,7 @@ export function Header() {
           <Link href="/settings" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-slate-900">{user.name}</p>
-              <p className="text-xs text-slate-500 capitalize">{user.role}</p>
+              <p className="text-xs text-slate-500 capitalize">{user.role.toLowerCase()}</p>
             </div>
             <div className="h-9 w-9 rounded-full bg-indigo-100 flex items-center justify-center">
               <User className="h-4 w-4 text-indigo-600" />
