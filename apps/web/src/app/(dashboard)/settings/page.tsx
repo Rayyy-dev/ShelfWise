@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { User, Mail, Shield, Clock, Building2, LogOut, Pencil, X, Database, CheckCircle } from 'lucide-react';
+import { User, Mail, Shield, Clock, Building2, LogOut, Pencil, X, Database, CheckCircle, Trash2, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -20,14 +20,25 @@ export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoResult, setDemoResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    // Fetch fresh user data from API to ensure role is up-to-date
+    async function fetchUser() {
+      try {
+        const freshUser = await auth.me();
+        setUser(freshUser);
+        localStorage.setItem('user', JSON.stringify(freshUser));
+      } catch {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      }
     }
+    fetchUser();
   }, []);
 
   async function handleLoadDemoData() {
@@ -100,8 +111,8 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-slate-500 mb-1">Role</label>
-                  <Badge variant={user.role === 'admin' ? 'default' : 'success'}>
-                    {user.role === 'admin' ? 'Administrator' : 'Librarian'}
+                  <Badge variant={user.role === 'ADMIN' ? 'default' : 'success'}>
+                    {user.role === 'ADMIN' ? 'Administrator' : 'Librarian'}
                   </Badge>
                 </div>
               </div>
@@ -127,7 +138,7 @@ export default function SettingsPage() {
                 Access Level
               </dt>
               <dd className="mt-1 font-medium text-slate-900">
-                {user.role === 'admin' ? 'Full Access' : 'Standard Access'}
+                {user.role === 'ADMIN' ? 'Full Access' : 'Standard Access'}
               </dd>
             </div>
             <div>
@@ -180,10 +191,16 @@ export default function SettingsPage() {
         {/* Actions */}
         <Card>
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Actions</h2>
-          <Button variant="danger" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
+          <div className="space-y-3">
+            <Button variant="secondary" onClick={handleLogout} className="w-full justify-start">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+            <Button variant="danger" onClick={() => setShowDeleteModal(true)} className="w-full justify-start">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Account
+            </Button>
+          </div>
         </Card>
       </div>
 
@@ -193,6 +210,18 @@ export default function SettingsPage() {
           user={user}
           onClose={() => setShowEditModal(false)}
           onSave={handleSaveProfile}
+        />
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <DeleteAccountModal
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            router.push('/login');
+          }}
         />
       )}
     </div>
@@ -295,6 +324,92 @@ function EditProfileModal({
             </Button>
           </div>
         </form>
+      </Card>
+    </div>
+  );
+}
+
+function DeleteAccountModal({
+  onClose,
+  onConfirm,
+}: {
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [confirmText, setConfirmText] = useState('');
+
+  async function handleDelete() {
+    if (confirmText !== 'DELETE') return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await auth.deleteAccount();
+      onConfirm();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete account');
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
+      <Card className="w-full max-w-md">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Delete Account</h2>
+            <p className="text-sm text-slate-500">This action cannot be undone</p>
+          </div>
+        </div>
+
+        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          <p className="font-medium mb-1">Warning: All your data will be permanently deleted:</p>
+          <ul className="list-disc list-inside text-red-600 space-y-0.5">
+            <li>All books and copies</li>
+            <li>All members</li>
+            <li>All borrowing records</li>
+            <li>All fines</li>
+          </ul>
+        </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            Type DELETE to confirm
+          </label>
+          <input
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder="DELETE"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500"
+          />
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleDelete}
+            disabled={loading || confirmText !== 'DELETE'}
+            isLoading={loading}
+          >
+            Delete Account
+          </Button>
+        </div>
       </Card>
     </div>
   );

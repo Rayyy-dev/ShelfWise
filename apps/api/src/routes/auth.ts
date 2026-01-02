@@ -316,4 +316,47 @@ router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// DELETE /api/auth/me - Delete current user account and all their data
+router.delete('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+
+    // Delete all user's data in correct order (respecting foreign key constraints)
+    // 1. Delete fines (references borrowings)
+    await prisma.fine.deleteMany({
+      where: { borrowing: { member: { userId } } },
+    });
+
+    // 2. Delete borrowings (references members and book copies)
+    await prisma.borrowing.deleteMany({
+      where: { member: { userId } },
+    });
+
+    // 3. Delete book copies (references books)
+    await prisma.bookCopy.deleteMany({
+      where: { book: { userId } },
+    });
+
+    // 4. Delete books
+    await prisma.book.deleteMany({
+      where: { userId },
+    });
+
+    // 5. Delete members
+    await prisma.member.deleteMany({
+      where: { userId },
+    });
+
+    // 6. Finally delete the user
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
 export default router;

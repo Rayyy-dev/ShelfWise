@@ -98,6 +98,8 @@ export const auth = {
   me: () => fetchApi<any>('/api/auth/me'),
   updateProfile: (data: { name?: string; email?: string; role?: string }) =>
     fetchApi<any>('/api/auth/me', { method: 'PUT', body: JSON.stringify(data) }),
+  deleteAccount: () =>
+    fetchApi<{ message: string }>('/api/auth/me', { method: 'DELETE' }),
 };
 
 // Books
