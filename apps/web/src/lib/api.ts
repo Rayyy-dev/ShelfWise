@@ -96,7 +96,7 @@ export const auth = {
       body: JSON.stringify({ email, token, password }),
     }),
   me: () => fetchApi<any>('/api/auth/me'),
-  updateProfile: (data: { name?: string; email?: string }) =>
+  updateProfile: (data: { name?: string; email?: string; role?: string }) =>
     fetchApi<any>('/api/auth/me', { method: 'PUT', body: JSON.stringify(data) }),
 };
 

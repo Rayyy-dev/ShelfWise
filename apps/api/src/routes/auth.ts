@@ -76,6 +76,7 @@ router.post('/register', async (req: Request, res: Response) => {
         passwordHash,
         name: name.trim(),
         isVerified: true, // Auto-verify users
+        role: 'ADMIN', // All users are admin for now
       },
     });
 
@@ -272,7 +273,7 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 // PUT /api/auth/me - Update current user profile
 router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, role } = req.body;
 
     // First find the user by email from token (more reliable than ID)
     const existingUser = await prisma.user.findUnique({
@@ -283,9 +284,16 @@ router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const updateData: { name?: string; email?: string } = {};
+    const updateData: { name?: string; email?: string; role?: string } = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email;
+
+    // Only allow role change if user is admin
+    if (role && existingUser.role === 'ADMIN') {
+      if (role === 'ADMIN' || role === 'LIBRARIAN') {
+        updateData.role = role;
+      }
+    }
 
     const user = await prisma.user.update({
       where: { id: existingUser.id },

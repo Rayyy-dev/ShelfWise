@@ -15,6 +15,9 @@ import reportsRoutes from './routes/reports.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for Render/Heroku (needed for rate limiting behind reverse proxy)
+app.set('trust proxy', 1);
+
 // Swagger configuration
 const swaggerOptions = {
   definition: {
