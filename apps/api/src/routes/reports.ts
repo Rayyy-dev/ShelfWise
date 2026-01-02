@@ -8,8 +8,10 @@ const router = Router();
 router.get('/books', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { format = 'json' } = req.query;
+    const userId = req.user!.id;
 
     const books = await prisma.book.findMany({
+      where: { userId }, // Filter by current user
       include: {
         copies: {
           select: { id: true, barcode: true, status: true, condition: true, shelfLocation: true },
@@ -67,8 +69,10 @@ router.get('/books', authMiddleware, async (req: AuthRequest, res: Response) => 
 router.get('/members', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { format = 'json' } = req.query;
+    const userId = req.user!.id;
 
     const members = await prisma.member.findMany({
+      where: { userId }, // Filter by current user
       include: {
         borrowings: {
           where: { status: 'ACTIVE' },
@@ -126,8 +130,11 @@ router.get('/members', authMiddleware, async (req: AuthRequest, res: Response) =
 router.get('/borrowings', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { format = 'json', status, startDate, endDate } = req.query;
+    const userId = req.user!.id;
 
-    const where: any = {};
+    const where: any = {
+      member: { userId }, // Filter by current user
+    };
     if (status) where.status = status;
     if (startDate || endDate) {
       where.borrowDate = {};
@@ -200,8 +207,11 @@ router.get('/borrowings', authMiddleware, async (req: AuthRequest, res: Response
 router.get('/fines', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { format = 'json', status } = req.query;
+    const userId = req.user!.id;
 
-    const where: any = {};
+    const where: any = {
+      borrowing: { member: { userId } }, // Filter by current user
+    };
     if (status) where.status = status;
 
     const fines = await prisma.fine.findMany({
@@ -266,11 +276,13 @@ router.get('/fines', authMiddleware, async (req: AuthRequest, res: Response) => 
 router.get('/overdue', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { format = 'json' } = req.query;
+    const userId = req.user!.id;
 
     const overdue = await prisma.borrowing.findMany({
       where: {
         status: 'ACTIVE',
         dueDate: { lt: new Date() },
+        member: { userId }, // Filter by current user
       },
       include: {
         member: { select: { memberNumber: true, firstName: true, lastName: true, email: true, phone: true } },
@@ -335,6 +347,9 @@ router.get('/overdue', authMiddleware, async (req: AuthRequest, res: Response) =
 // GET /api/reports/summary - Get overall library summary
 router.get('/summary', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user!.id;
+    const userFilter = { borrowing: { member: { userId } } };
+
     const [
       totalBooks,
       totalCopies,
@@ -349,18 +364,18 @@ router.get('/summary', authMiddleware, async (req: AuthRequest, res: Response) =
       paidFines,
       categoryStats,
     ] = await Promise.all([
-      prisma.book.count(),
-      prisma.bookCopy.count(),
-      prisma.bookCopy.count({ where: { status: 'AVAILABLE' } }),
-      prisma.bookCopy.count({ where: { status: 'BORROWED' } }),
-      prisma.member.count(),
-      prisma.member.count({ where: { status: 'ACTIVE' } }),
-      prisma.borrowing.count({ where: { status: 'ACTIVE' } }),
-      prisma.borrowing.count({ where: { status: 'ACTIVE', dueDate: { lt: new Date() } } }),
-      prisma.fine.aggregate({ _sum: { amount: true }, _count: true }),
-      prisma.fine.aggregate({ where: { status: 'PENDING' }, _sum: { amount: true }, _count: true }),
-      prisma.fine.aggregate({ where: { status: 'PAID' }, _sum: { amount: true }, _count: true }),
-      prisma.book.groupBy({ by: ['category'], _count: true }),
+      prisma.book.count({ where: { userId } }),
+      prisma.bookCopy.count({ where: { book: { userId } } }),
+      prisma.bookCopy.count({ where: { status: 'AVAILABLE', book: { userId } } }),
+      prisma.bookCopy.count({ where: { status: 'BORROWED', book: { userId } } }),
+      prisma.member.count({ where: { userId } }),
+      prisma.member.count({ where: { status: 'ACTIVE', userId } }),
+      prisma.borrowing.count({ where: { status: 'ACTIVE', member: { userId } } }),
+      prisma.borrowing.count({ where: { status: 'ACTIVE', dueDate: { lt: new Date() }, member: { userId } } }),
+      prisma.fine.aggregate({ where: userFilter, _sum: { amount: true }, _count: true }),
+      prisma.fine.aggregate({ where: { ...userFilter, status: 'PENDING' }, _sum: { amount: true }, _count: true }),
+      prisma.fine.aggregate({ where: { ...userFilter, status: 'PAID' }, _sum: { amount: true }, _count: true }),
+      prisma.book.groupBy({ by: ['category'], where: { userId }, _count: true }),
     ]);
 
     res.json({
@@ -406,9 +421,12 @@ router.get('/summary', authMiddleware, async (req: AuthRequest, res: Response) =
 // GET /api/reports/insights - Management insights and analytics
 router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    // Top 10 most borrowed books (all time)
+    const userId = req.user!.id;
+
+    // Top 10 most borrowed books (all time) - filtered by current user
     const borrowingCounts = await prisma.borrowing.groupBy({
       by: ['bookCopyId'],
+      where: { member: { userId } },
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
       take: 50,
@@ -416,7 +434,7 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
 
     const topBookCopyIds = borrowingCounts.map((b: any) => b.bookCopyId);
     const topBookCopies = await prisma.bookCopy.findMany({
-      where: { id: { in: topBookCopyIds } },
+      where: { id: { in: topBookCopyIds }, book: { userId } },
       include: { book: { select: { id: true, title: true, author: true, category: true } } },
     });
 
@@ -444,9 +462,10 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
         borrowCount: item.count,
       }));
 
-    // Most active members (by total borrowings)
+    // Most active members (by total borrowings) - filtered by current user
     const memberBorrowings = await prisma.borrowing.groupBy({
       by: ['memberId'],
+      where: { member: { userId } },
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
       take: 10,
@@ -454,7 +473,7 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
 
     const topMemberIds = memberBorrowings.map((m: any) => m.memberId);
     const topMembers = await prisma.member.findMany({
-      where: { id: { in: topMemberIds } },
+      where: { id: { in: topMemberIds }, userId },
       select: { id: true, memberNumber: true, firstName: true, lastName: true, status: true },
     });
 
@@ -469,8 +488,9 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
       };
     });
 
-    // Category performance (most popular categories)
+    // Category performance (most popular categories) - filtered by current user
     const categoryBorrowings = await prisma.borrowing.findMany({
+      where: { member: { userId } },
       include: {
         bookCopy: {
           include: { book: { select: { category: true } } },
@@ -493,9 +513,9 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
         borrowCount: count,
       }));
 
-    // Members with most overdue fines
+    // Members with most overdue fines - filtered by current user
     const memberFines = await prisma.fine.findMany({
-      where: { status: 'PENDING' },
+      where: { status: 'PENDING', borrowing: { member: { userId } } },
       include: {
         borrowing: {
           include: {
@@ -530,11 +550,11 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
         totalOwed: parseFloat(item.amount.toFixed(2)),
       }));
 
-    // Generate management recommendations
+    // Generate management recommendations - filtered by current user
     const [totalBorrowings, returnedBorrowings, overdueBorrowings] = await Promise.all([
-      prisma.borrowing.count(),
-      prisma.borrowing.count({ where: { status: 'RETURNED' } }),
-      prisma.borrowing.count({ where: { status: 'ACTIVE', dueDate: { lt: new Date() } } }),
+      prisma.borrowing.count({ where: { member: { userId } } }),
+      prisma.borrowing.count({ where: { status: 'RETURNED', member: { userId } } }),
+      prisma.borrowing.count({ where: { status: 'ACTIVE', dueDate: { lt: new Date() }, member: { userId } } }),
     ]);
 
     const returnRate = totalBorrowings > 0 ? (returnedBorrowings / totalBorrowings) * 100 : 0;
@@ -555,12 +575,12 @@ router.get('/insights', authMiddleware, async (req: AuthRequest, res: Response) 
       recommendations.push('Excellent return rate! Your members are responsibly returning books on time.');
     }
 
-    // Monthly trend (last 6 months)
+    // Monthly trend (last 6 months) - filtered by current user
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
     const recentBorrowings = await prisma.borrowing.findMany({
-      where: { borrowDate: { gte: sixMonthsAgo } },
+      where: { borrowDate: { gte: sixMonthsAgo }, member: { userId } },
       select: { borrowDate: true },
     });
 

@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { User, Mail, Shield, Clock, Building2, LogOut, Pencil, X } from 'lucide-react';
+import { User, Mail, Shield, Clock, Building2, LogOut, Pencil, X, Database, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import { Input } from '@/components/ui';
-import { auth } from '@/lib/api';
+import { auth, dashboard } from '@/lib/api';
 
 interface UserData {
   id: string;
@@ -20,6 +20,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoResult, setDemoResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -27,6 +29,25 @@ export default function SettingsPage() {
       setUser(JSON.parse(storedUser));
     }
   }, []);
+
+  async function handleLoadDemoData() {
+    setDemoLoading(true);
+    setDemoResult(null);
+    try {
+      const result = await dashboard.seedDemo();
+      setDemoResult({
+        success: true,
+        message: `Demo data loaded: ${result.summary.books} books, ${result.summary.members} members, ${result.summary.activeBorrowings + result.summary.returnedBorrowings} borrowings`,
+      });
+    } catch (err: any) {
+      setDemoResult({
+        success: false,
+        message: err.message || 'Failed to load demo data',
+      });
+    } finally {
+      setDemoLoading(false);
+    }
+  }
 
   function handleLogout() {
     localStorage.removeItem('token');
@@ -126,15 +147,43 @@ export default function SettingsPage() {
           </dl>
         </Card>
 
+        {/* Demo Data */}
+        <Card className="lg:col-span-2">
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">Demo Data</h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Load sample books, members, and borrowings to explore the system. This only works when your library is empty.
+          </p>
+
+          {demoResult && (
+            <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${
+              demoResult.success
+                ? 'bg-green-50 border border-green-200 text-green-700'
+                : 'bg-red-50 border border-red-200 text-red-600'
+            }`}>
+              <div className="flex items-center gap-2">
+                {demoResult.success && <CheckCircle className="h-4 w-4" />}
+                {demoResult.message}
+              </div>
+            </div>
+          )}
+
+          <Button
+            variant="secondary"
+            onClick={handleLoadDemoData}
+            disabled={demoLoading}
+          >
+            <Database className="mr-2 h-4 w-4" />
+            {demoLoading ? 'Loading Demo Data...' : 'Load Demo Data'}
+          </Button>
+        </Card>
+
         {/* Actions */}
-        <Card className="lg:col-span-3">
+        <Card>
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Actions</h2>
-          <div className="flex gap-3">
-            <Button variant="danger" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
+          <Button variant="danger" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
         </Card>
       </div>
 

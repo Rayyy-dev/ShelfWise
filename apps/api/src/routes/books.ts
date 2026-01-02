@@ -13,13 +13,15 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.BookWhereInput = {};
+    const where: Prisma.BookWhereInput = {
+      userId: req.user!.id, // Filter by current user
+    };
 
     if (search) {
       where.OR = [
-        { title: { contains: search as string } },
-        { author: { contains: search as string } },
-        { isbn: { contains: search as string } },
+        { title: { contains: search as string }, userId: req.user!.id },
+        { author: { contains: search as string }, userId: req.user!.id },
+        { isbn: { contains: search as string }, userId: req.user!.id },
       ];
     }
 
@@ -74,7 +76,10 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 router.get('/available-copies', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const copies = await prisma.bookCopy.findMany({
-      where: { status: 'AVAILABLE' },
+      where: {
+        status: 'AVAILABLE',
+        book: { userId: req.user!.id }, // Filter by current user's books
+      },
       include: {
         book: {
           select: { id: true, title: true, author: true, isbn: true, category: true },
@@ -94,6 +99,7 @@ router.get('/available-copies', authMiddleware, async (req: AuthRequest, res: Re
 router.get('/categories', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const categories = await prisma.book.findMany({
+      where: { userId: req.user!.id }, // Filter by current user
       select: { category: true },
       distinct: ['category'],
       orderBy: { category: 'asc' },
@@ -111,8 +117,8 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const book = await prisma.book.findUnique({
-      where: { id },
+    const book = await prisma.book.findFirst({
+      where: { id, userId: req.user!.id }, // Filter by current user
       include: {
         copies: {
           include: {
@@ -163,6 +169,7 @@ router.post('/', authMiddleware, requireAdmin, async (req: AuthRequest, res: Res
         description,
         publishedYear,
         coverImage,
+        userId: req.user!.id, // Associate with current user
         copies: copies?.length
           ? {
               create: copies.map((barcode: string) => ({
@@ -194,6 +201,15 @@ router.put('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: R
     const { id } = req.params;
     const { isbn, title, author, category, description, publishedYear, coverImage } = req.body;
 
+    // First verify the book belongs to this user
+    const existing = await prisma.book.findFirst({
+      where: { id, userId: req.user!.id },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+
     const book = await prisma.book.update({
       where: { id },
       data: {
@@ -224,6 +240,15 @@ router.put('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: R
 router.delete('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Verify book belongs to this user
+    const existing = await prisma.book.findFirst({
+      where: { id, userId: req.user!.id },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
 
     // Check if any copies are borrowed
     const borrowedCopies = await prisma.borrowing.count({
@@ -258,6 +283,15 @@ router.post('/:id/copies', authMiddleware, requireAdmin, async (req: AuthRequest
       return res.status(400).json({ error: 'Barcode is required' });
     }
 
+    // Verify book belongs to this user
+    const book = await prisma.book.findFirst({
+      where: { id, userId: req.user!.id },
+    });
+
+    if (!book) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+
     const copy = await prisma.bookCopy.create({
       data: {
         bookId: id,
@@ -283,6 +317,15 @@ router.put('/copies/:copyId', authMiddleware, requireAdmin, async (req: AuthRequ
   try {
     const { copyId } = req.params;
     const { barcode, status, condition, shelfLocation } = req.body;
+
+    // Verify copy belongs to a book owned by this user
+    const existing = await prisma.bookCopy.findFirst({
+      where: { id: copyId, book: { userId: req.user!.id } },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Copy not found' });
+    }
 
     const copy = await prisma.bookCopy.update({
       where: { id: copyId },

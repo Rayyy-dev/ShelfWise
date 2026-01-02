@@ -19,23 +19,29 @@ model User {
   verificationTries Int       @default(0)
   resetToken        String?
   resetTokenExp     DateTime?
+  books             Book[]
+  members           Member[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
 
 model Book {
   id            String     @id @default(cuid())
-  isbn          String?    @unique
+  isbn          String?
   title         String
   author        String
   category      String
   description   String?
   publishedYear Int?
   coverImage    String?
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
   copies        BookCopy[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
+  @@unique([isbn, userId])
+  @@index([userId])
   @@index([category])
   @@index([author])
 }
@@ -57,18 +63,23 @@ model BookCopy {
 
 model Member {
   id           String      @id @default(cuid())
-  memberNumber String      @unique // LIB-001, LIB-002...
+  memberNumber String      // LIB-001, LIB-002...
   firstName    String
   lastName     String
-  email        String      @unique
+  email        String
   phone        String?
   address      String?
   status       String      @default("ACTIVE") // ACTIVE, SUSPENDED, EXPIRED
   maxBooks     Int         @default(5)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
   borrowings   Borrowing[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  @@unique([memberNumber, userId])
+  @@unique([email, userId])
+  @@index([userId])
   @@index([status])
 }
 

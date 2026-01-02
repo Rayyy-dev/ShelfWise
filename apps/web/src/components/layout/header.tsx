@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { User, Search, Bell, AlertTriangle } from 'lucide-react';
+import { User, Bell, AlertTriangle, BookOpen } from 'lucide-react';
 import { borrowings } from '@/lib/api';
 
 interface OverdueItem {
@@ -47,16 +47,12 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between px-6 bg-white border-b border-slate-200">
-      {/* Search */}
-      <div className="flex-1 max-w-md">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
+      {/* Logo/Title */}
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+          <BookOpen className="h-4 w-4 text-white" />
         </div>
+        <span className="text-lg font-semibold text-slate-900 hidden sm:block">ShelfWise</span>
       </div>
 
       {/* Right section */}

@@ -5,9 +5,10 @@ import { requireAdmin } from '../middleware/authorize.js';
 
 const router = Router();
 
-// Generate next member number
-async function getNextMemberNumber(): Promise<string> {
+// Generate next member number for a specific user
+async function getNextMemberNumber(userId: string): Promise<string> {
   const lastMember = await prisma.member.findFirst({
+    where: { userId },
     orderBy: { memberNumber: 'desc' },
   });
 
@@ -27,14 +28,16 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.MemberWhereInput = {};
+    const where: Prisma.MemberWhereInput = {
+      userId: req.user!.id, // Filter by current user
+    };
 
     if (search) {
       where.OR = [
-        { firstName: { contains: search as string } },
-        { lastName: { contains: search as string } },
-        { email: { contains: search as string } },
-        { memberNumber: { contains: search as string } },
+        { firstName: { contains: search as string }, userId: req.user!.id },
+        { lastName: { contains: search as string }, userId: req.user!.id },
+        { email: { contains: search as string }, userId: req.user!.id },
+        { memberNumber: { contains: search as string }, userId: req.user!.id },
       ];
     }
 
@@ -81,8 +84,8 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const member = await prisma.member.findUnique({
-      where: { id },
+    const member = await prisma.member.findFirst({
+      where: { id, userId: req.user!.id }, // Filter by current user
       include: {
         borrowings: {
           include: {
@@ -123,7 +126,7 @@ router.post('/', authMiddleware, requireAdmin, async (req: AuthRequest, res: Res
       return res.status(400).json({ error: 'First name, last name, and email are required' });
     }
 
-    const memberNumber = await getNextMemberNumber();
+    const memberNumber = await getNextMemberNumber(req.user!.id);
 
     const member = await prisma.member.create({
       data: {
@@ -134,6 +137,7 @@ router.post('/', authMiddleware, requireAdmin, async (req: AuthRequest, res: Res
         phone,
         address,
         maxBooks: maxBooks || 5,
+        userId: req.user!.id, // Associate with current user
       },
     });
 
@@ -152,6 +156,15 @@ router.put('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: R
   try {
     const { id } = req.params;
     const { firstName, lastName, email, phone, address, status, maxBooks } = req.body;
+
+    // Verify member belongs to this user
+    const existing = await prisma.member.findFirst({
+      where: { id, userId: req.user!.id },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
 
     const member = await prisma.member.update({
       where: { id },
@@ -183,6 +196,15 @@ router.put('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: R
 router.delete('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Verify member belongs to this user
+    const existing = await prisma.member.findFirst({
+      where: { id, userId: req.user!.id },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
 
     const activeLoans = await prisma.borrowing.count({
       where: { memberId: id, status: 'ACTIVE' },

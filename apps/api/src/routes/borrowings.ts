@@ -15,7 +15,9 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.BorrowingWhereInput = {};
+    const where: Prisma.BorrowingWhereInput = {
+      member: { userId: req.user!.id }, // Filter by current user's members
+    };
 
     if (status) {
       if (status === 'OVERDUE') {
@@ -79,9 +81,9 @@ router.post('/checkout', authMiddleware, async (req: AuthRequest, res: Response)
       return res.status(400).json({ error: 'Member ID and barcode are required' });
     }
 
-    // Validate member
-    const member = await prisma.member.findUnique({
-      where: { id: memberId },
+    // Validate member (must belong to current user)
+    const member = await prisma.member.findFirst({
+      where: { id: memberId, userId: req.user!.id },
       include: {
         borrowings: { where: { status: 'ACTIVE' } },
       },
@@ -101,9 +103,9 @@ router.post('/checkout', authMiddleware, async (req: AuthRequest, res: Response)
       });
     }
 
-    // Validate book copy
-    const bookCopy = await prisma.bookCopy.findUnique({
-      where: { barcode },
+    // Validate book copy (must belong to current user's books)
+    const bookCopy = await prisma.bookCopy.findFirst({
+      where: { barcode, book: { userId: req.user!.id } },
       include: { book: true },
     });
 
@@ -161,8 +163,8 @@ router.post('/:id/return', authMiddleware, async (req: AuthRequest, res: Respons
     const { id } = req.params;
     const { condition } = req.body;
 
-    const borrowing = await prisma.borrowing.findUnique({
-      where: { id },
+    const borrowing = await prisma.borrowing.findFirst({
+      where: { id, member: { userId: req.user!.id } }, // Filter by current user
       include: { bookCopy: true },
     });
 
@@ -229,8 +231,8 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const borrowing = await prisma.borrowing.findUnique({
-      where: { id },
+    const borrowing = await prisma.borrowing.findFirst({
+      where: { id, member: { userId: req.user!.id } }, // Filter by current user
       include: {
         member: {
           select: { id: true, firstName: true, lastName: true, memberNumber: true, email: true, phone: true },
@@ -269,8 +271,8 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { dueDate, status } = req.body;
 
-    const borrowing = await prisma.borrowing.findUnique({
-      where: { id },
+    const borrowing = await prisma.borrowing.findFirst({
+      where: { id, member: { userId: req.user!.id } }, // Filter by current user
       include: { bookCopy: true },
     });
 
@@ -336,8 +338,8 @@ router.delete('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res
   try {
     const { id } = req.params;
 
-    const borrowing = await prisma.borrowing.findUnique({
-      where: { id },
+    const borrowing = await prisma.borrowing.findFirst({
+      where: { id, member: { userId: req.user!.id } }, // Filter by current user
       include: { bookCopy: true },
     });
 
@@ -375,6 +377,7 @@ router.get('/overdue/list', authMiddleware, async (req: AuthRequest, res: Respon
       where: {
         status: 'ACTIVE',
         dueDate: { lt: new Date() },
+        member: { userId: req.user!.id }, // Filter by current user
       },
       include: {
         member: {

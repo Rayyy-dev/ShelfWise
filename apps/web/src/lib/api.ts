@@ -81,7 +81,7 @@ export const auth = {
       body: JSON.stringify({ email, password }),
     }),
   register: (email: string, password: string, name: string) =>
-    fetchApi<{ message: string; token?: string }>('/api/auth/register', {
+    fetchApi<{ message: string; token?: string; user?: any }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, name }),
     }),
@@ -163,6 +163,7 @@ export const borrowings = {
 // Dashboard
 export const dashboard = {
   stats: () => fetchApi<any>('/api/dashboard/stats'),
+  seedDemo: () => fetchApi<{ message: string; summary: any }>('/api/dashboard/seed-demo', { method: 'POST' }),
 };
 
 // Fines

@@ -15,14 +15,20 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.FineWhereInput = {};
+    const borrowingFilter: Prisma.BorrowingWhereInput = {
+      member: { userId: req.user!.id },
+    };
+
+    if (memberId) {
+      borrowingFilter.memberId = memberId as string;
+    }
+
+    const where: Prisma.FineWhereInput = {
+      borrowing: borrowingFilter,
+    };
 
     if (status) {
       where.status = status as string;
-    }
-
-    if (memberId) {
-      where.borrowing = { memberId: memberId as string };
     }
 
     const [fines, total] = await Promise.all([
@@ -64,11 +70,12 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 // GET /api/fines/stats - Get fine statistics
 router.get('/stats', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const userFilter = { borrowing: { member: { userId: req.user!.id } } };
     const [totalFines, pendingFines, paidFines, waivedFines] = await Promise.all([
-      prisma.fine.aggregate({ _sum: { amount: true }, _count: true }),
-      prisma.fine.aggregate({ where: { status: 'PENDING' }, _sum: { amount: true }, _count: true }),
-      prisma.fine.aggregate({ where: { status: 'PAID' }, _sum: { amount: true }, _count: true }),
-      prisma.fine.aggregate({ where: { status: 'WAIVED' }, _sum: { amount: true }, _count: true }),
+      prisma.fine.aggregate({ where: userFilter, _sum: { amount: true }, _count: true }),
+      prisma.fine.aggregate({ where: { ...userFilter, status: 'PENDING' }, _sum: { amount: true }, _count: true }),
+      prisma.fine.aggregate({ where: { ...userFilter, status: 'PAID' }, _sum: { amount: true }, _count: true }),
+      prisma.fine.aggregate({ where: { ...userFilter, status: 'WAIVED' }, _sum: { amount: true }, _count: true }),
     ]);
 
     res.json({
@@ -98,11 +105,12 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res: Response) => 
 // POST /api/fines/calculate - Calculate fines for overdue books (ADMIN only)
 router.post('/calculate', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    // Find all active overdue borrowings without fines
+    // Find all active overdue borrowings without fines (for current user's members)
     const overdueBorrowings = await prisma.borrowing.findMany({
       where: {
         status: 'ACTIVE',
         dueDate: { lt: new Date() },
+        member: { userId: req.user!.id }, // Filter by current user
       },
       include: {
         fines: true,
@@ -161,7 +169,10 @@ router.post('/', authMiddleware, requireAdmin, async (req: AuthRequest, res: Res
       return res.status(400).json({ error: 'Borrowing ID, amount, and reason are required' });
     }
 
-    const borrowing = await prisma.borrowing.findUnique({ where: { id: borrowingId } });
+    // Verify borrowing belongs to current user
+    const borrowing = await prisma.borrowing.findFirst({
+      where: { id: borrowingId, member: { userId: req.user!.id } },
+    });
     if (!borrowing) {
       return res.status(404).json({ error: 'Borrowing not found' });
     }
@@ -194,7 +205,10 @@ router.put('/:id/pay', authMiddleware, async (req: AuthRequest, res: Response) =
   try {
     const { id } = req.params;
 
-    const fine = await prisma.fine.findUnique({ where: { id } });
+    // Verify fine belongs to current user
+    const fine = await prisma.fine.findFirst({
+      where: { id, borrowing: { member: { userId: req.user!.id } } },
+    });
     if (!fine) {
       return res.status(404).json({ error: 'Fine not found' });
     }
@@ -230,7 +244,10 @@ router.put('/:id/waive', authMiddleware, requireAdmin, async (req: AuthRequest, 
   try {
     const { id } = req.params;
 
-    const fine = await prisma.fine.findUnique({ where: { id } });
+    // Verify fine belongs to current user
+    const fine = await prisma.fine.findFirst({
+      where: { id, borrowing: { member: { userId: req.user!.id } } },
+    });
     if (!fine) {
       return res.status(404).json({ error: 'Fine not found' });
     }
@@ -263,8 +280,8 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const fine = await prisma.fine.findUnique({
-      where: { id },
+    const fine = await prisma.fine.findFirst({
+      where: { id, borrowing: { member: { userId: req.user!.id } } }, // Filter by current user
       include: {
         borrowing: {
           include: {
@@ -290,6 +307,14 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 router.delete('/:id', authMiddleware, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Verify fine belongs to current user
+    const fine = await prisma.fine.findFirst({
+      where: { id, borrowing: { member: { userId: req.user!.id } } },
+    });
+    if (!fine) {
+      return res.status(404).json({ error: 'Fine not found' });
+    }
 
     await prisma.fine.delete({ where: { id } });
     res.json({ success: true });

@@ -40,9 +40,12 @@ export default function RegisterPage() {
 
     try {
       const response = await auth.register(email, password, name);
-      // Auto-verified - store token and redirect to dashboard
+      // Auto-verified - store token and user, then redirect to dashboard
       if (response.token) {
         localStorage.setItem('token', response.token);
+        if (response.user) {
+          localStorage.setItem('user', JSON.stringify(response.user));
+        }
         router.push('/');
       } else {
         router.push('/login');

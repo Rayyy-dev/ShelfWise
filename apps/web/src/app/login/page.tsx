@@ -13,14 +13,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [needsVerification, setNeedsVerification] = useState(false);
-  const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    setNeedsVerification(false);
     setLoading(true);
 
     try {
@@ -29,12 +26,7 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(result.user));
       router.push('/');
     } catch (err: any) {
-      const message = err.message || 'Login failed';
-      if (message.includes('verify your email')) {
-        setNeedsVerification(true);
-        setUnverifiedEmail(email);
-      }
-      setError(message);
+      setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -64,14 +56,6 @@ export default function LoginPage() {
             {error && (
               <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                 {error}
-                {needsVerification && (
-                  <Link
-                    href={`/verify?email=${encodeURIComponent(unverifiedEmail)}`}
-                    className="block mt-2 text-indigo-600 hover:text-indigo-700 font-medium"
-                  >
-                    Verify your email now
-                  </Link>
-                )}
               </div>
             )}
 
@@ -83,6 +67,7 @@ export default function LoginPage() {
               required
               placeholder="Enter your email"
               icon={<Mail className="h-4 w-4" />}
+              autoComplete="email"
             />
 
             <Input
@@ -93,16 +78,10 @@ export default function LoginPage() {
               required
               placeholder="Enter your password"
               icon={<Lock className="h-4 w-4" />}
+              autoComplete="current-password"
             />
 
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm text-slate-600">Remember me</span>
-              </label>
+            <div className="flex justify-end">
               <Link href="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-700">
                 Forgot password?
               </Link>
