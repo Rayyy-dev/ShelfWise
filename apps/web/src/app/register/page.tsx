@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Library, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { auth } from '@/lib/api';
 import { getPasswordStrength, isPasswordValid, PasswordRequirement } from '@/lib/password';
 import { Button } from '@/components/ui';
@@ -63,7 +63,7 @@ export default function RegisterPage() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="h-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <BookOpen className="h-5 w-5 text-white" />
+            <Library className="h-5 w-5 text-white" />
           </div>
           <span className="text-xl font-semibold text-slate-900">ShelfWise</span>
         </div>

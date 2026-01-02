@@ -90,7 +90,7 @@ export default function SettingsPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Profile Card */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/60 shadow-sm p-6 border-l-4 border-l-indigo-500">
+        <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-semibold text-slate-900">Profile</h2>
             <Button variant="secondary" size="sm" onClick={() => setShowEditModal(true)}>
@@ -99,77 +99,55 @@ export default function SettingsPage() {
             </Button>
           </div>
 
-          <div className="flex items-start gap-6">
-            <div className="h-16 w-16 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
-              <User className="h-8 w-8 text-indigo-600" />
+          <div className="flex items-start gap-5">
+            <div className="h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+              <User className="h-7 w-7 text-slate-600" />
             </div>
 
-            <div className="space-y-4 flex-1">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-sm text-slate-500 mb-1">Name</p>
-                  <p className="font-medium text-slate-900">{user.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 mb-1">Role</p>
-                  <Badge variant={user.role === 'ADMIN' ? 'default' : 'success'}>
-                    {user.role === 'ADMIN' ? 'Administrator' : 'Librarian'}
-                  </Badge>
-                </div>
-              </div>
-
+            <div className="space-y-3 flex-1">
               <div>
-                <p className="text-sm text-slate-500 mb-1">Email</p>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-slate-400" />
-                  <span className="text-slate-900">{user.email}</span>
-                </div>
+                <p className="font-medium text-slate-900">{user.name}</p>
+                <p className="text-sm text-slate-500">{user.email}</p>
               </div>
+              <Badge variant={user.role === 'ADMIN' ? 'default' : 'success'}>
+                {user.role === 'ADMIN' ? 'Administrator' : 'Librarian'}
+              </Badge>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Quick Info */}
-        <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm p-6 border-l-4 border-l-emerald-500">
-          <h2 className="font-semibold text-slate-900 mb-5">Account Info</h2>
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
-                <span className="text-sm text-slate-600">Access Level</span>
-              </div>
+        {/* Account Info */}
+        <Card>
+          <h2 className="font-semibold text-slate-900 mb-4">Account</h2>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+              <span className="text-sm text-slate-500">Access</span>
               <span className="text-sm font-medium text-slate-900">
-                {user.role === 'ADMIN' ? 'Full Access' : 'Standard'}
+                {user.role === 'ADMIN' ? 'Full' : 'Standard'}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
-                <span className="text-sm text-slate-600">Organization</span>
-              </div>
+            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+              <span className="text-sm text-slate-500">Organization</span>
               <span className="text-sm font-medium text-slate-900">ShelfWise</span>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                <span className="text-sm text-slate-600">Session</span>
-              </div>
-              <span className="text-sm font-medium text-emerald-600">Active</span>
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm text-slate-500">Status</span>
+              <span className="text-sm font-medium text-slate-900">Active</span>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Demo Data */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/60 shadow-sm p-6 border-l-4 border-l-amber-500">
-          <h2 className="font-semibold text-slate-900 mb-2">Demo Data</h2>
+        <Card className="lg:col-span-2">
+          <h2 className="font-semibold text-slate-900 mb-1">Demo Data</h2>
           <p className="text-sm text-slate-500 mb-4">
-            Load sample books, members, and borrowings to explore the system. This only works when your library is empty.
+            Load sample data to explore the system. Only works when empty.
           </p>
 
           {demoResult && (
             <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${
               demoResult.success
-                ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                ? 'bg-slate-50 border border-slate-200 text-slate-700'
                 : 'bg-red-50 border border-red-200 text-red-600'
             }`}>
               <div className="flex items-center gap-2">
@@ -185,14 +163,14 @@ export default function SettingsPage() {
             disabled={demoLoading}
           >
             <Database className="mr-2 h-4 w-4" />
-            {demoLoading ? 'Loading Demo Data...' : 'Load Demo Data'}
+            {demoLoading ? 'Loading...' : 'Load Demo Data'}
           </Button>
-        </div>
+        </Card>
 
         {/* Actions */}
-        <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm p-6 border-l-4 border-l-slate-400">
-          <h2 className="font-semibold text-slate-900 mb-5">Actions</h2>
-          <div className="space-y-3">
+        <Card>
+          <h2 className="font-semibold text-slate-900 mb-4">Actions</h2>
+          <div className="space-y-2">
             <Button variant="secondary" onClick={handleLogout} className="w-full justify-start">
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
@@ -202,7 +180,7 @@ export default function SettingsPage() {
               Delete Account
             </Button>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Edit Profile Modal */}
