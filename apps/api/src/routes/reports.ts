@@ -3,40 +3,90 @@ import { prisma } from '@shelfwise/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import PDFDocument from 'pdfkit';
 
-// Helper to generate PDF table
-function generatePdfTable(doc: PDFKit.PDFDocument, title: string, headers: string[], rows: string[][]) {
-  const pageWidth = doc.page.width - 100;
-  const colWidth = pageWidth / headers.length;
-  const startX = 50;
-  let y = doc.y;
+// Helper to generate clean PDF report
+function generatePdfReport(
+  doc: PDFKit.PDFDocument,
+  title: string,
+  headers: string[],
+  rows: string[][],
+  colWidths?: number[]
+) {
+  const margin = 40;
+  const pageWidth = doc.page.width - margin * 2;
+  const rowHeight = 18;
 
-  // Title
-  doc.fontSize(18).font('Helvetica-Bold').text(title, startX, 50);
-  doc.fontSize(10).font('Helvetica').text(`Generated: ${new Date().toLocaleDateString()}`, startX, 75);
-  y = 110;
+  // Calculate column widths - either use provided or distribute evenly
+  const widths = colWidths || headers.map(() => pageWidth / headers.length);
+
+  let y = margin;
+
+  // Title section
+  doc.fontSize(20).font('Helvetica-Bold').fillColor('#1e293b').text(title, margin, y);
+  y += 30;
+
+  doc.fontSize(10).font('Helvetica').fillColor('#64748b')
+    .text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, margin, y);
+  y += 10;
+  doc.text(`Total Records: ${rows.length}`, margin, y);
+  y += 25;
+
+  // Draw header background
+  doc.rect(margin, y, pageWidth, rowHeight + 4).fill('#f1f5f9');
+  y += 2;
 
   // Headers
-  doc.fontSize(9).font('Helvetica-Bold');
+  doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155');
+  let x = margin + 4;
   headers.forEach((header, i) => {
-    doc.text(header, startX + (i * colWidth), y, { width: colWidth - 5, align: 'left' });
+    doc.text(header.toUpperCase(), x, y + 4, { width: widths[i] - 8, ellipsis: true });
+    x += widths[i];
   });
-  y += 20;
-  doc.moveTo(startX, y).lineTo(startX + pageWidth, y).stroke();
-  y += 10;
+  y += rowHeight + 4;
 
   // Rows
-  doc.font('Helvetica').fontSize(8);
-  rows.forEach((row) => {
-    if (y > doc.page.height - 80) {
+  doc.font('Helvetica').fillColor('#475569');
+  let alternate = false;
+
+  rows.forEach((row, rowIndex) => {
+    // Check for page break
+    if (y > doc.page.height - 60) {
       doc.addPage();
-      y = 50;
+      y = margin;
+
+      // Redraw headers on new page
+      doc.rect(margin, y, pageWidth, rowHeight + 4).fill('#f1f5f9');
+      y += 2;
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155');
+      x = margin + 4;
+      headers.forEach((header, i) => {
+        doc.text(header.toUpperCase(), x, y + 4, { width: widths[i] - 8, ellipsis: true });
+        x += widths[i];
+      });
+      y += rowHeight + 4;
+      doc.font('Helvetica').fillColor('#475569');
+      alternate = false;
     }
-    const rowHeight = 15;
+
+    // Alternate row background
+    if (alternate) {
+      doc.rect(margin, y, pageWidth, rowHeight).fill('#f8fafc');
+    }
+    alternate = !alternate;
+
+    // Row data
+    doc.fillColor('#334155').fontSize(8);
+    x = margin + 4;
     row.forEach((cell, i) => {
-      doc.text(String(cell || ''), startX + (i * colWidth), y, { width: colWidth - 5, align: 'left' });
+      const cellText = String(cell || '-');
+      doc.text(cellText, x, y + 4, { width: widths[i] - 8, ellipsis: true });
+      x += widths[i];
     });
     y += rowHeight;
   });
+
+  // Footer line
+  y += 10;
+  doc.moveTo(margin, y).lineTo(margin + pageWidth, y).strokeColor('#e2e8f0').stroke();
 }
 
 const router = Router();
@@ -92,7 +142,7 @@ router.get('/books', authMiddleware, async (req: AuthRequest, res: Response) => 
     }
 
     if (format === 'pdf') {
-      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 40 });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename=books_report.pdf');
       doc.pipe(res);
@@ -101,7 +151,9 @@ router.get('/books', authMiddleware, async (req: AuthRequest, res: Response) => 
         row.isbn, row.title, row.author, row.category,
         String(row.publishedYear), String(row.totalCopies), String(row.availableCopies), String(row.borrowedCopies)
       ]);
-      generatePdfTable(doc, 'Books Inventory Report', headers, rows);
+      // Custom column widths: ISBN, Title, Author, Category, Year, Total, Available, Borrowed
+      const colWidths = [80, 180, 140, 100, 50, 50, 60, 60];
+      generatePdfReport(doc, 'Books Inventory Report', headers, rows, colWidths);
       doc.end();
       return;
     }
@@ -168,7 +220,7 @@ router.get('/members', authMiddleware, async (req: AuthRequest, res: Response) =
     }
 
     if (format === 'pdf') {
-      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 40 });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename=members_report.pdf');
       doc.pipe(res);
@@ -177,7 +229,9 @@ router.get('/members', authMiddleware, async (req: AuthRequest, res: Response) =
         row.memberNumber, row.name, row.email, row.phone,
         row.status, String(row.activeLoans), String(row.maxBooks), row.memberSince
       ]);
-      generatePdfTable(doc, 'Members Directory Report', headers, rows);
+      // Custom column widths: Member#, Name, Email, Phone, Status, Active Loans, Max Books, Since
+      const colWidths = [70, 120, 160, 100, 60, 70, 70, 70];
+      generatePdfReport(doc, 'Members Directory Report', headers, rows, colWidths);
       doc.end();
       return;
     }
@@ -260,7 +314,7 @@ router.get('/borrowings', authMiddleware, async (req: AuthRequest, res: Response
     }
 
     if (format === 'pdf') {
-      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 40 });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename=borrowings_report.pdf');
       doc.pipe(res);
@@ -269,7 +323,9 @@ router.get('/borrowings', authMiddleware, async (req: AuthRequest, res: Response
         row.memberNumber, row.memberName, row.bookTitle, row.bookAuthor,
         row.barcode, row.borrowDate, row.dueDate, row.returnDate, row.status
       ]);
-      generatePdfTable(doc, 'Borrowing History Report', headers, rows);
+      // Custom column widths: Member#, Member, Book, Author, Barcode, Borrowed, Due, Returned, Status
+      const colWidths = [50, 80, 110, 80, 140, 65, 65, 65, 55];
+      generatePdfReport(doc, 'Borrowing History Report', headers, rows, colWidths);
       doc.end();
       return;
     }
@@ -344,7 +400,7 @@ router.get('/fines', authMiddleware, async (req: AuthRequest, res: Response) => 
     }
 
     if (format === 'pdf') {
-      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 40 });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename=fines_report.pdf');
       doc.pipe(res);
@@ -353,7 +409,9 @@ router.get('/fines', authMiddleware, async (req: AuthRequest, res: Response) => 
         row.memberNumber, row.memberName, row.bookTitle, `$${row.amount}`,
         row.reason, row.status, row.createdAt, row.paidAt
       ]);
-      generatePdfTable(doc, 'Fines Report', headers, rows);
+      // Custom column widths: Member#, Member, Book, Amount, Reason, Status, Created, Paid At
+      const colWidths = [70, 120, 180, 60, 100, 70, 80, 80];
+      generatePdfReport(doc, 'Fines Report', headers, rows, colWidths);
       doc.end();
       return;
     }
@@ -430,7 +488,7 @@ router.get('/overdue', authMiddleware, async (req: AuthRequest, res: Response) =
     }
 
     if (format === 'pdf') {
-      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 50 });
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 40 });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename=overdue_report.pdf');
       doc.pipe(res);
@@ -439,7 +497,9 @@ router.get('/overdue', authMiddleware, async (req: AuthRequest, res: Response) =
         row.memberNumber, row.memberName, row.memberEmail, row.memberPhone,
         row.bookTitle, row.barcode, row.dueDate, String(row.daysOverdue), `$${row.estimatedFine}`
       ]);
-      generatePdfTable(doc, 'Overdue Books Report', headers, rows);
+      // Custom column widths: Member#, Member, Email, Phone, Book, Barcode, Due Date, Days, Est. Fine
+      const colWidths = [50, 80, 110, 75, 100, 140, 65, 40, 50];
+      generatePdfReport(doc, 'Overdue Books Report', headers, rows, colWidths);
       doc.end();
       return;
     }
