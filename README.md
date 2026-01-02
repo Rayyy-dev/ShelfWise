@@ -2,7 +2,7 @@
 
 Library management system for tracking books, members, and borrowings.
 
-**Live Demo:** [shelfwise.vercel.app](https://shelfwise.vercel.app) | **API:** [shelfwise-api.onrender.com](https://shelfwise-api.onrender.com)
+**Live Demo:** [shelf-wise-web.vercel.app](https://shelf-wise-web.vercel.app) | **API:** [shelfwise-940k.onrender.com](https://shelfwise-940k.onrender.com)
 
 ---
 
